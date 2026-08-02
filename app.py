@@ -410,7 +410,6 @@ if st.session_state.view == "home":
             content.
         </p>
     </div>
-    <div class="divider"></div>
     """, unsafe_allow_html=True)
 
     # ---- Upload ----
