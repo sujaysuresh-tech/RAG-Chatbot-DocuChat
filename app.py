@@ -382,7 +382,7 @@ def estimate_relevance(vectorstore, query: str):
 # =============================================================================
 st.markdown("""
 <div class="hero">
-    <div class="hero-eyebrow">Retrieval-Augmented Document Intelligence</div>
+    <div class="hero-eyebrow">Retrieval Augmented Generation</div>
     <h1>Docu<span>Chat</span></h1>
     <p class="hero-sub">
         Upload your documents and get answers grounded strictly in their
