@@ -400,14 +400,12 @@ st.markdown("""
 # =============================================================================
 upload_col, _sp1, _sp2 = st.columns([6, 1, 1])
 with upload_col:
-    st.markdown('<div class="input-card">', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
     )
     build_clicked = st.button(
         "⚡  Build Knowledge Base", use_container_width=True, disabled=not uploaded_files
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.doc_names:
         chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
