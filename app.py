@@ -397,10 +397,11 @@ details summary {
 }
 
 .bot-bubble {
-    background: transparent;
+    background: rgba(255,255,255,0.03);
     color: #e8e4dc;
-    border: none;
+    border: 1px solid rgba(255,255,255,0.07);
     align-self: flex-start;
+    border-bottom-left-radius: 4px;
 }
 .bot-bubble .bubble-meta {
     font-family: 'DM Mono', monospace;
