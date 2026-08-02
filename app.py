@@ -67,6 +67,31 @@ html, body {
 
 #MainMenu, footer, header { visibility: hidden; }
 
+/* Keep the sidebar open/close toggle visible even though header is hidden */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+    visibility: visible !important;
+    display: flex !important;
+    position: fixed !important;
+    top: 0.8rem !important;
+    left: 0.8rem !important;
+    z-index: 999999 !important;
+}
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="collapsedControl"] button,
+[data-testid="stSidebarCollapseButton"] button {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,140,50,0.25) !important;
+    border-radius: 8px !important;
+    color: #f0ebe0 !important;
+}
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapseButton"] svg {
+    fill: #f0ebe0 !important;
+}
+
 /* ── Sidebar (doc management, appears after a successful upload) ── */
 [data-testid="stSidebar"] {
     background: #0d0d12 !important;
