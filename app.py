@@ -398,7 +398,7 @@ st.markdown("""
 # =============================================================================
 # UPLOAD
 # =============================================================================
-_sp1, upload_col, _sp2 = st.columns([1, 2, 1])
+_sp1, upload_col, _sp2 = st.columns([1.5, 1, 1.5])
 with upload_col:
     uploaded_files = st.file_uploader(
         "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
