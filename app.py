@@ -306,13 +306,12 @@ footer { visibility: hidden; }
     -webkit-backdrop-filter: none !important;
 }
 [data-testid="stBottomBlockContainer"] {
-    background: rgba(255,255,255,0.025) !important;
-    border: 1px solid rgba(255,140,50,0.15) !important;
-    border-top: none !important;
-    border-radius: 0 0 16px 16px !important;
-    max-width: 1200px !important;
-    margin: 0 auto !important;
-    padding: 0.9rem 1.4rem !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0.5rem 0 !important;
 }
 [data-testid="stChatInput"] > div,
 [data-testid="stChatInputContainer"] {
@@ -423,12 +422,8 @@ details summary {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 1.1rem 1.4rem 0.8rem;
-    margin-bottom: 0;
-    background: rgba(255,255,255,0.025);
-    border: 1px solid rgba(255,140,50,0.15);
-    border-bottom: none;
-    border-radius: 16px 16px 0 0;
+    padding: 0.4rem 0.2rem 0.8rem;
+    margin-bottom: 0.6rem;
 }
 .chat-window::-webkit-scrollbar { width: 6px; }
 .chat-window::-webkit-scrollbar-thumb {
