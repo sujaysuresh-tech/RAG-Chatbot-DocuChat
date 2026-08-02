@@ -244,23 +244,23 @@ html, body {
     background: linear-gradient(135deg, #ff8c32 0%, #ff5a1a 100%) !important;
     border-radius: 50% !important;
 }
-[data-testid="stBottomBlockContainer"],
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottomBlockContainer"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+[data-testid="stBottomBlockContainer"] {
+    padding: 0.5rem 0 !important;
+}
 [data-testid="stChatInput"] > div,
 [data-testid="stChatInputContainer"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-}
-[data-testid="stBottom"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-[data-testid="stBottomBlockContainer"] {
-    padding: 0 !important;
-    position: static !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
 }
 
 /* ── Alerts / expanders ── */
