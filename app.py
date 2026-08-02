@@ -743,26 +743,6 @@ if not ready:
 
 else:
     # ---------------- SIDEBAR: appears only once a document is indexed ----------------
-    st.markdown("""
-    <style>
-    /* Force the sidebar to always stay open on the chat screen, regardless
-       of any collapsed state the browser remembers from earlier. */
-    [data-testid="stSidebar"] {
-        transform: none !important;
-        visibility: visible !important;
-        min-width: 300px !important;
-        width: 300px !important;
-    }
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        transform: none !important;
-    }
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
     with st.sidebar:
         st.markdown('<div class="hero-eyebrow" style="text-align:left;">DocuChat</div>', unsafe_allow_html=True)
 
