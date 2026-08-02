@@ -379,22 +379,26 @@ def estimate_relevance(vectorstore, query: str):
 
 
 # =============================================================================
-# HERO + PIPELINE (side by side — DocuChat heading parallel to Pipeline)
+# HERO — full width, centered, at the top
 # =============================================================================
-col_input, col_spacer, col_pipeline = st.columns([5, 0.5, 4])
+st.markdown("""
+<div class="hero">
+    <div class="hero-eyebrow">Retrieval Augmented Generation</div>
+    <h1>Docu<span>Chat</span></h1>
+    <p class="hero-sub">
+        Upload your documents and get answers grounded strictly in their
+        content.
+    </p>
+</div>
+<div class="divider"></div>
+""", unsafe_allow_html=True)
 
-with col_input:
-    st.markdown("""
-    <div class="hero" style="text-align:left; padding: 0 0 1.5rem;">
-        <div class="hero-eyebrow">Retrieval Augmented Generation</div>
-        <h1 style="font-size: clamp(2.2rem, 4vw, 3.4rem);">Docu<span>Chat</span></h1>
-        <p class="hero-sub" style="text-align:left; margin: 0;">
-            Upload your documents and get answers grounded strictly in their
-            content.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
 
+# =============================================================================
+# UPLOAD
+# =============================================================================
+upload_col, _sp1, _sp2 = st.columns([6, 1, 1])
+with upload_col:
     st.markdown('<div class="input-card">', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
@@ -411,66 +415,69 @@ with col_input:
             unsafe_allow_html=True,
         )
 
-with col_pipeline:
-    st.markdown('<div class="section-heading" style="margin-top:0;">Pipeline</div>', unsafe_allow_html=True)
-    p1 = st.empty()
-    p2 = st.empty()
-    p3 = st.empty()
-    p4 = st.empty()
+# =============================================================================
+# PIPELINE — full width, steps side by side
+# =============================================================================
+st.markdown('<div class="section-heading">Pipeline</div>', unsafe_allow_html=True)
+pc1, pc2, pc3, pc4 = st.columns(4)
+p1 = pc1.empty()
+p2 = pc2.empty()
+p3 = pc3.empty()
+p4 = pc4.empty()
 
-    ready = st.session_state.retriever is not None
-    initial_state = "done" if ready else "waiting"
-    p1.markdown(step_card_html("01", "Load Documents", initial_state, "Parses each PDF page by page"), unsafe_allow_html=True)
-    p2.markdown(step_card_html("02", "Split into Chunks", initial_state, "1000 chars, 200 overlap"), unsafe_allow_html=True)
-    p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
-    p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
+ready = st.session_state.retriever is not None
+initial_state = "done" if ready else "waiting"
+p1.markdown(step_card_html("01", "Load Documents", initial_state, "Parses each PDF page by page"), unsafe_allow_html=True)
+p2.markdown(step_card_html("02", "Split into Chunks", initial_state, "1000 chars, 200 overlap"), unsafe_allow_html=True)
+p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
+p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
 
-    if build_clicked and uploaded_files:
-        # ── Step 1: load ──
-        p1.markdown(step_card_html("01", "Load Documents", "running", "Parses each PDF page by page"), unsafe_allow_html=True)
-        all_docs = []
-        for uploaded_file in uploaded_files:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                file_path = tmp_file.name
-            try:
-                loader = PyPDFLoader(file_path)
-                all_docs.extend(loader.load())
-            finally:
-                os.unlink(file_path)
-        p1.markdown(step_card_html("01", "Load Documents", "done", f"{len(all_docs)} pages parsed"), unsafe_allow_html=True)
-
-        # ── Step 2: split ──
-        p2.markdown(step_card_html("02", "Split into Chunks", "running", "1000 chars, 200 overlap"), unsafe_allow_html=True)
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        chunks = splitter.split_documents(all_docs)
-        p2.markdown(step_card_html("02", "Split into Chunks", "done", f"{len(chunks)} chunks created"), unsafe_allow_html=True)
-
-        # ── Step 3: embed ──
-        p3.markdown(step_card_html("03", "Generate Embeddings", "running", "MiniLM-L6-v2, local"), unsafe_allow_html=True)
-        embeddings = load_embedding_model()
-        p3.markdown(step_card_html("03", "Generate Embeddings", "done", "Embedding model ready"), unsafe_allow_html=True)
-
-        # ── Step 4: index ──
-        p4.markdown(step_card_html("04", "Build Vector Index", "running", "Chroma · MMR retriever"), unsafe_allow_html=True)
+if build_clicked and uploaded_files:
+    # ── Step 1: load ──
+    p1.markdown(step_card_html("01", "Load Documents", "running", "Parses each PDF page by page"), unsafe_allow_html=True)
+    all_docs = []
+    for uploaded_file in uploaded_files:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            file_path = tmp_file.name
         try:
-            vectorstore = Chroma.from_documents(documents=chunks, embedding=embeddings)
-            retriever = vectorstore.as_retriever(
-                search_type="mmr",
-                search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
-            )
-            st.session_state.vectorstore = vectorstore
-            st.session_state.retriever = retriever
-            st.session_state.num_chunks = len(chunks)
-            st.session_state.num_pages = len(all_docs)
-            st.session_state.doc_names = [f.name for f in uploaded_files]
-            st.session_state.chat_history = []
-            st.session_state.queries_asked = 0
-            p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
-            st.success("Knowledge base ready — ask a question below.")
-        except Exception as e:
-            p4.markdown(step_card_html("04", "Build Vector Index", "waiting", "Failed — see error below"), unsafe_allow_html=True)
-            st.error(f"Couldn't build the index: {e}")
+            loader = PyPDFLoader(file_path)
+            all_docs.extend(loader.load())
+        finally:
+            os.unlink(file_path)
+    p1.markdown(step_card_html("01", "Load Documents", "done", f"{len(all_docs)} pages parsed"), unsafe_allow_html=True)
+
+    # ── Step 2: split ──
+    p2.markdown(step_card_html("02", "Split into Chunks", "running", "1000 chars, 200 overlap"), unsafe_allow_html=True)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = splitter.split_documents(all_docs)
+    p2.markdown(step_card_html("02", "Split into Chunks", "done", f"{len(chunks)} chunks created"), unsafe_allow_html=True)
+
+    # ── Step 3: embed ──
+    p3.markdown(step_card_html("03", "Generate Embeddings", "running", "MiniLM-L6-v2, local"), unsafe_allow_html=True)
+    embeddings = load_embedding_model()
+    p3.markdown(step_card_html("03", "Generate Embeddings", "done", "Embedding model ready"), unsafe_allow_html=True)
+
+    # ── Step 4: index ──
+    p4.markdown(step_card_html("04", "Build Vector Index", "running", "Chroma · MMR retriever"), unsafe_allow_html=True)
+    try:
+        vectorstore = Chroma.from_documents(documents=chunks, embedding=embeddings)
+        retriever = vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
+        )
+        st.session_state.vectorstore = vectorstore
+        st.session_state.retriever = retriever
+        st.session_state.num_chunks = len(chunks)
+        st.session_state.num_pages = len(all_docs)
+        st.session_state.doc_names = [f.name for f in uploaded_files]
+        st.session_state.chat_history = []
+        st.session_state.queries_asked = 0
+        p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
+        st.success("Knowledge base ready — ask a question below.")
+    except Exception as e:
+        p4.markdown(step_card_html("04", "Build Vector Index", "waiting", "Failed — see error below"), unsafe_allow_html=True)
+        st.error(f"Couldn't build the index: {e}")
 
 
 # =============================================================================
