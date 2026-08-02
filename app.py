@@ -21,6 +21,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_mistralai import ChatMistralAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+# Temporary debug lines to see if Streamlit Cloud is listening to your config
+st.write("--- SERVER DIAGNOSTICS ---")
+st.write("Is XSRF Protection Disabled?", st.get_option("server.enableXsrfProtection") == False)
+st.write("Is CORS Disabled?", st.get_option("server.enableCORS") == False)
+st.write("---------------------------")
+
 load_dotenv()
 
 # Streamlit Cloud provides secrets via st.secrets rather than a .env file.
