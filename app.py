@@ -479,14 +479,14 @@ if st.session_state.view == "home":
 
     ready = st.session_state.retriever is not None
     initial_state = "done" if ready else "waiting"
-    p1.markdown(step_card_html("01", "Load Documents", initial_state, "Parses each PDF page by page"), unsafe_allow_html=True)
-    p2.markdown(step_card_html("02", "Split into Chunks", initial_state, "1000 chars, 200 overlap"), unsafe_allow_html=True)
-    p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
-    p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
+    p1.markdown(step_card_html("01", "Load Documents", initial_state), unsafe_allow_html=True)
+    p2.markdown(step_card_html("02", "Split into Chunks", initial_state), unsafe_allow_html=True)
+    p3.markdown(step_card_html("03", "Generate Embeddings", initial_state), unsafe_allow_html=True)
+    p4.markdown(step_card_html("04", "Build Vector Index", initial_state), unsafe_allow_html=True)
 
     if build_clicked and pending_files:
         # ── Step 1: load ──
-        p1.markdown(step_card_html("01", "Load Documents", "running", "Parses each PDF page by page"), unsafe_allow_html=True)
+        p1.markdown(step_card_html("01", "Load Documents", "running"), unsafe_allow_html=True)
         all_docs = []
         for _name, file_path in pending_files:
             try:
@@ -497,18 +497,18 @@ if st.session_state.view == "home":
         p1.markdown(step_card_html("01", "Load Documents", "done", f"{len(all_docs)} pages parsed"), unsafe_allow_html=True)
 
         # ── Step 2: split ──
-        p2.markdown(step_card_html("02", "Split into Chunks", "running", "1000 chars, 200 overlap"), unsafe_allow_html=True)
+        p2.markdown(step_card_html("02", "Split into Chunks", "running"), unsafe_allow_html=True)
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = splitter.split_documents(all_docs)
         p2.markdown(step_card_html("02", "Split into Chunks", "done", f"{len(chunks)} chunks created"), unsafe_allow_html=True)
 
         # ── Step 3: embed ──
-        p3.markdown(step_card_html("03", "Generate Embeddings", "running", "MiniLM-L6-v2, local"), unsafe_allow_html=True)
+        p3.markdown(step_card_html("03", "Generate Embeddings", "running"), unsafe_allow_html=True)
         embeddings = load_embedding_model()
         p3.markdown(step_card_html("03", "Generate Embeddings", "done", "Embedding model ready"), unsafe_allow_html=True)
 
         # ── Step 4: index ──
-        p4.markdown(step_card_html("04", "Build Vector Index", "running", "Chroma · MMR retriever"), unsafe_allow_html=True)
+        p4.markdown(step_card_html("04", "Build Vector Index", "running"), unsafe_allow_html=True)
         try:
             vectorstore = Chroma.from_documents(documents=chunks, embedding=embeddings)
             retriever = vectorstore.as_retriever(
