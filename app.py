@@ -712,8 +712,6 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
             unsafe_allow_html=True,
         )
 
-    st.markdown('<div class="section-heading">Ask a Question</div>', unsafe_allow_html=True)
-
     def render_source_details(sources) -> str:
         if not sources:
             return ""
