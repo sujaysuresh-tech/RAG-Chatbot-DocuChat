@@ -379,27 +379,22 @@ def estimate_relevance(vectorstore, query: str):
 
 
 # =============================================================================
-# HERO
-# =============================================================================
-st.markdown("""
-<div class="hero">
-    <div class="hero-eyebrow">Retrieval Augmented Generation</div>
-    <h1>Docu<span>Chat</span></h1>
-    <p class="hero-sub">
-        Upload your documents and get answers grounded strictly in their
-        content.
-    </p>
-</div>
-<div class="divider"></div>
-""", unsafe_allow_html=True)
-
-
-# =============================================================================
-# INPUT + PIPELINE (two columns, mirrors ResearchMind layout)
+# HERO + PIPELINE (side by side — DocuChat heading parallel to Pipeline)
 # =============================================================================
 col_input, col_spacer, col_pipeline = st.columns([5, 0.5, 4])
 
 with col_input:
+    st.markdown("""
+    <div class="hero" style="text-align:left; padding: 0 0 1.5rem;">
+        <div class="hero-eyebrow">Retrieval Augmented Generation</div>
+        <h1 style="font-size: clamp(2.2rem, 4vw, 3.4rem);">Docu<span>Chat</span></h1>
+        <p class="hero-sub" style="text-align:left; margin: 0;">
+            Upload your documents and get answers grounded strictly in their
+            content.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown('<div class="input-card">', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
@@ -417,7 +412,7 @@ with col_input:
         )
 
 with col_pipeline:
-    st.markdown('<div class="section-heading">Pipeline</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading" style="margin-top:0;">Pipeline</div>', unsafe_allow_html=True)
     p1 = st.empty()
     p2 = st.empty()
     p3 = st.empty()
