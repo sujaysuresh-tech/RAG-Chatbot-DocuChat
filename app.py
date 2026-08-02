@@ -631,6 +631,6 @@ else:
 # =============================================================================
 st.markdown("""
 <div class="notice">
-    DocuChat · Powered by LangChain + Mistral · Built with Streamlit
+    DocuChat · Powered by LangChain · RAG
 </div>
 """, unsafe_allow_html=True)
