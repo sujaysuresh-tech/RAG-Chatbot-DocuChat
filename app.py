@@ -298,8 +298,7 @@ footer { visibility: hidden; }
     border-radius: 50% !important;
 }
 [data-testid="stBottom"],
-[data-testid="stBottom"] > div,
-[data-testid="stBottomBlockContainer"] {
+[data-testid="stBottom"] > div {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -307,7 +306,13 @@ footer { visibility: hidden; }
     -webkit-backdrop-filter: none !important;
 }
 [data-testid="stBottomBlockContainer"] {
-    padding: 0.5rem 0 !important;
+    background: rgba(255,255,255,0.025) !important;
+    border: 1px solid rgba(255,140,50,0.15) !important;
+    border-top: none !important;
+    border-radius: 0 0 16px 16px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 0.9rem 1.4rem !important;
 }
 [data-testid="stChatInput"] > div,
 [data-testid="stChatInputContainer"] {
@@ -412,13 +417,18 @@ details summary {
 /* ── Chat window (bounded, scrollable, bubble-style) ── */
 .chat-window {
     max-height: 58vh;
+    min-height: 12rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.4rem 0.2rem 0.8rem;
-    margin-bottom: 1rem;
+    padding: 1.1rem 1.4rem 0.8rem;
+    margin-bottom: 0;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,140,50,0.15);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
 }
 .chat-window::-webkit-scrollbar { width: 6px; }
 .chat-window::-webkit-scrollbar-thumb {
@@ -740,12 +750,6 @@ if not ready:
 
     if build_clicked and pending_files:
         process_upload(pending_files, (p1, p2, p3, p4))
-
-    st.markdown("""
-    <div class="notice">
-        DocuChat · Powered by LangChain · RAG
-    </div>
-    """, unsafe_allow_html=True)
 
 else:
     # ---------------- SIDEBAR: appears only once a document is indexed ----------------
