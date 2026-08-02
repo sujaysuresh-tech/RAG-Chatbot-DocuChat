@@ -283,6 +283,21 @@ details summary {
     font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #605850;
     text-align: center; margin-top: 3rem; letter-spacing: 0.08em;
 }
+
+/* ── Mobile: force columns to stack full-width ── */
+@media (max-width: 768px) {
+    [data-testid="stHorizontalBlock"] {
+        flex-direction: column !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    .block-container {
+        padding: 1.2rem 1rem 3rem !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
