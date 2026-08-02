@@ -336,6 +336,90 @@ details summary {
         font-size: clamp(1.6rem, 12vw, 2.2rem) !important;
     }
 }
+/* ── Chat window (bounded, scrollable, bubble-style) ── */
+.chat-window {
+    max-height: 58vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0.4rem 0.2rem 0.8rem;
+    margin-bottom: 1rem;
+}
+.chat-window::-webkit-scrollbar { width: 6px; }
+.chat-window::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 9999px;
+}
+
+.msg-bubble {
+    padding: 0.7rem 1.1rem;
+    border-radius: 14px;
+    max-width: 78%;
+    font-size: 14.5px;
+    line-height: 1.55;
+    word-wrap: break-word;
+    animation: messageIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes messageIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.user-bubble {
+    background: linear-gradient(135deg, #ff8c32 0%, #ff5a1a 100%);
+    color: #0a0a0f;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 16px rgba(255,140,50,0.22);
+    font-weight: 500;
+}
+
+.bot-bubble {
+    background: rgba(255,255,255,0.03);
+    color: #e8e4dc;
+    border: 1px solid rgba(255,255,255,0.07);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+.bot-bubble .bubble-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: #706860;
+    margin-top: 0.6rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.bot-bubble details {
+    margin-top: 0.5rem;
+}
+.bot-bubble details summary {
+    font-family: 'DM Mono', monospace !important;
+    font-size: 0.68rem !important;
+    color: #a09890 !important;
+    letter-spacing: 0.08em !important;
+    cursor: pointer;
+}
+.bot-bubble .source-card { margin-top: 0.5rem; }
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0.6rem 1.1rem;
+}
+.typing-indicator span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #706860;
+    animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -584,32 +668,32 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
 
     st.markdown('<div class="section-heading">Ask a Question</div>', unsafe_allow_html=True)
 
+    def render_source_details(sources) -> str:
+        if not sources:
+            return ""
+        cards = "".join(
+            f'<div class="source-card"><b>Source {i} · Page {s["page"]}</b><br>{s["text"]}</div>'
+            for i, s in enumerate(sources, start=1)
+        )
+        return f'<details><summary>View {len(sources)} source excerpts</summary>{cards}</details>'
+
+    bubbles_html = '<div class="chat-window">'
     for msg in st.session_state.chat_history:
         if msg["role"] == "user":
-            st.markdown(
-                f'<div class="query-panel"><div class="panel-label muted">You asked</div>{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
+            bubbles_html += f'<div class="msg-bubble user-bubble">{msg["content"]}</div>'
         else:
-            st.markdown(
-                f'<div class="report-panel"><div class="panel-label orange">📝 Response</div>{msg["content"]}</div>',
-                unsafe_allow_html=True,
-            )
             meta_bits = [f'⏱ {msg.get("elapsed", "—")}s']
             if msg.get("relevance") is not None:
                 meta_bits.append(f'Relevance ~{msg["relevance"]}%')
-            feedback_body = " &nbsp;·&nbsp; ".join(meta_bits)
-            st.markdown(
-                f'<div class="feedback-panel"><div class="panel-label green">🧐 Retrieval Detail</div>{feedback_body}</div>',
-                unsafe_allow_html=True,
+            meta_line = " &nbsp;·&nbsp; ".join(meta_bits)
+            sources_html = render_source_details(msg.get("sources"))
+            bubbles_html += (
+                f'<div class="msg-bubble bot-bubble">{msg["content"]}'
+                f'<div class="bubble-meta">{meta_line}</div>{sources_html}</div>'
             )
-            if msg.get("sources"):
-                with st.expander(f"View {len(msg['sources'])} source excerpts"):
-                    for i, s in enumerate(msg["sources"], start=1):
-                        st.markdown(
-                            f'<div class="source-card"><b>Source {i} · Page {s["page"]}</b><br>{s["text"]}</div>',
-                            unsafe_allow_html=True,
-                        )
+    bubbles_html += "</div>"
+    chat_window = st.empty()
+    chat_window.markdown(bubbles_html, unsafe_allow_html=True)
 
     query = st.chat_input("Ask a question about your document…")
     if query:
@@ -617,15 +701,21 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
         st.session_state.last_query = query
         st.session_state.queries_asked += 1
 
-        with st.spinner("Retrieving context and generating a response…"):
-            start = time.time()
-            docs = st.session_state.retriever.invoke(query)
-            context = "\n\n".join(doc.page_content for doc in docs)
-            final_prompt = PROMPT.invoke({"context": context, "question": query})
-            llm = load_llm()
-            response = llm.invoke(final_prompt)
-            elapsed = round(time.time() - start, 2)
-            relevance = estimate_relevance(st.session_state.vectorstore, query)
+        thinking_html = (
+            bubbles_html[:-6]
+            + f'<div class="msg-bubble user-bubble">{query}</div>'
+            + '<div class="typing-indicator"><span></span><span></span><span></span></div></div>'
+        )
+        chat_window.markdown(thinking_html, unsafe_allow_html=True)
+
+        start = time.time()
+        docs = st.session_state.retriever.invoke(query)
+        context = "\n\n".join(doc.page_content for doc in docs)
+        final_prompt = PROMPT.invoke({"context": context, "question": query})
+        llm = load_llm()
+        response = llm.invoke(final_prompt)
+        elapsed = round(time.time() - start, 2)
+        relevance = estimate_relevance(st.session_state.vectorstore, query)
 
         st.session_state.chat_history.append(
             {
