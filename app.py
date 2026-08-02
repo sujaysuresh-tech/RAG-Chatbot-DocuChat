@@ -77,8 +77,9 @@ html, body, [class*="css"] {
 .hero h1 span { color: #ff8c32; }
 .hero-sub {
     font-size: 1.05rem; font-weight: 300; color: #a09890;
-    max-width: 520px; margin: 0 auto; line-height: 1.65;
-    text-align: center;
+    max-width: 520px; width: 100%;
+    margin: 0 auto !important; line-height: 1.65;
+    text-align: center !important;
 }
 
 .divider {
