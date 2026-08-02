@@ -549,12 +549,35 @@ if st.session_state.view == "home":
                 st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
             else:
                 st.caption("No file selected yet.")
-            if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
-                for f in uploaded_files:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        tmp_file.write(f.getvalue())
-                        pending_files.append((f.name, tmp_file.name))
-                build_clicked = True
+
+            index_ready = st.session_state.retriever is not None
+            if index_ready:
+                btn_col, del_col = st.columns([3, 1])
+                with btn_col:
+                    if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
+                        for f in uploaded_files:
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                                tmp_file.write(f.getvalue())
+                                pending_files.append((f.name, tmp_file.name))
+                        build_clicked = True
+                with del_col:
+                    if st.button("Delete", use_container_width=True):
+                        st.session_state.retriever = None
+                        st.session_state.vectorstore = None
+                        st.session_state.doc_names = []
+                        st.session_state.num_chunks = 0
+                        st.session_state.num_pages = 0
+                        st.session_state.chat_history = []
+                        st.session_state.queries_asked = 0
+                        st.session_state.view = "home"
+                        st.rerun()
+            else:
+                if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
+                    for f in uploaded_files:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                            tmp_file.write(f.getvalue())
+                            pending_files.append((f.name, tmp_file.name))
+                    build_clicked = True
 
         with tab_link:
             st.caption("Trouble uploading on mobile? Paste a direct link to a PDF instead (Google Drive/Dropbox direct-download link, or any public PDF URL).")
@@ -736,23 +759,6 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
             }
         )
         st.rerun()
-
-    col_a, col_b, _ = st.columns([1, 1, 4])
-    with col_a:
-        if st.button("New Chat", use_container_width=True, disabled=not st.session_state.chat_history):
-            st.session_state.chat_history = []
-            st.rerun()
-    with col_b:
-        if st.button("Delete Index", use_container_width=True):
-            st.session_state.retriever = None
-            st.session_state.vectorstore = None
-            st.session_state.doc_names = []
-            st.session_state.num_chunks = 0
-            st.session_state.num_pages = 0
-            st.session_state.chat_history = []
-            st.session_state.queries_asked = 0
-            st.session_state.view = "home"
-            st.rerun()
 
 else:
     st.session_state.view = "home"
