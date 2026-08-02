@@ -720,11 +720,6 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
 
     query = st.chat_input("Ask a question about your document…")
 
-    st.markdown(
-        '<div class="notice" style="margin-top:1.2rem;">DocuChat · Powered by LangChain · RAG</div>',
-        unsafe_allow_html=True,
-    )
-
     if query:
         st.session_state.chat_history.append({"role": "user", "content": query})
         st.session_state.last_query = query
