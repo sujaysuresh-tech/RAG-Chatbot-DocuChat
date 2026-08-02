@@ -68,15 +68,21 @@ html, body {
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 
-/* Keep the header container itself (it holds the native sidebar toggle) but
-   make it transparent and hide just the Deploy/menu toolbar inside it. */
+/* Keep the header container AND its toolbar visible (the sidebar's
+   reopen arrow lives inside the toolbar) — just hide the Deploy button
+   and the "⋮" app-menu button specifically, not the whole toolbar. */
 [data-testid="stHeader"] {
     background: transparent !important;
     visibility: visible !important;
     height: 3.2rem !important;
 }
 [data-testid="stToolbar"] {
-    visibility: hidden !important;
+    visibility: visible !important;
+    background: transparent !important;
+}
+[data-testid="stAppDeployButton"],
+[data-testid="stMainMenu"] {
+    display: none !important;
 }
 [data-testid="stHeader"] button svg {
     fill: #f0ebe0 !important;
