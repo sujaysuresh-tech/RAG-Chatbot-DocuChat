@@ -737,6 +737,20 @@ if st.session_state.view == "home":
 # CHAT PAGE
 # =============================================================================
 elif st.session_state.view == "chat" and st.session_state.retriever is not None:
+    back_col, chips_col = st.columns([1, 6])
+    with back_col:
+        st.markdown('<div class="back-btn-wrap">', unsafe_allow_html=True)
+        if st.button("←", key="back_to_home", help="Back to upload"):
+            st.session_state.view = "home"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with chips_col:
+        chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
+        st.markdown(
+            f'<div class="chip-row"><span class="chip-label">INDEXED →&nbsp;</span>{chips}</div>',
+            unsafe_allow_html=True,
+        )
+
     def render_source_details(sources) -> str:
         if not sources:
             return ""
