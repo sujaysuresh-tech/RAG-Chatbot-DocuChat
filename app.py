@@ -418,6 +418,10 @@ if st.session_state.view == "home":
         uploaded_files = st.file_uploader(
             "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
         )
+        if uploaded_files:
+            st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
+        else:
+            st.caption("No file selected yet.")
         build_clicked = st.button(
             "⚡  Build Knowledge Base", use_container_width=True, disabled=not uploaded_files
         )
