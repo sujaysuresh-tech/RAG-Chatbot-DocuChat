@@ -396,6 +396,23 @@ st.markdown("""
 
 
 # =============================================================================
+# PIPELINE — full width, steps side by side
+# =============================================================================
+st.markdown('<div class="section-heading">Pipeline</div>', unsafe_allow_html=True)
+pc1, pc2, pc3, pc4 = st.columns(4)
+p1 = pc1.empty()
+p2 = pc2.empty()
+p3 = pc3.empty()
+p4 = pc4.empty()
+
+ready = st.session_state.retriever is not None
+initial_state = "done" if ready else "waiting"
+p1.markdown(step_card_html("01", "Load Documents", initial_state, "Parses each PDF page by page"), unsafe_allow_html=True)
+p2.markdown(step_card_html("02", "Split into Chunks", initial_state, "1000 chars, 200 overlap"), unsafe_allow_html=True)
+p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
+p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
+
+# =============================================================================
 # UPLOAD
 # =============================================================================
 upload_col, _sp1, _sp2 = st.columns([6, 1, 1])
@@ -416,23 +433,8 @@ with upload_col:
             unsafe_allow_html=True,
         )
 
-# =============================================================================
-# PIPELINE — full width, steps side by side
-# =============================================================================
-st.markdown('<div class="section-heading">Pipeline</div>', unsafe_allow_html=True)
-pc1, pc2, pc3, pc4 = st.columns(4)
-p1 = pc1.empty()
-p2 = pc2.empty()
-p3 = pc3.empty()
-p4 = pc4.empty()
-
-ready = st.session_state.retriever is not None
-initial_state = "done" if ready else "waiting"
-p1.markdown(step_card_html("01", "Load Documents", initial_state, "Parses each PDF page by page"), unsafe_allow_html=True)
-p2.markdown(step_card_html("02", "Split into Chunks", initial_state, "1000 chars, 200 overlap"), unsafe_allow_html=True)
-p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
-p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
-
+# Pipeline processing (updates the placeholders created above, which stay
+# anchored in the Pipeline section regardless of when this code runs)
 if build_clicked and uploaded_files:
     # ── Step 1: load ──
     p1.markdown(step_card_html("01", "Load Documents", "running", "Parses each PDF page by page"), unsafe_allow_html=True)
