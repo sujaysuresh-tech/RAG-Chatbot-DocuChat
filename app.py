@@ -44,7 +44,7 @@ LLM_MODEL_NAME = "mistral-small-2506"
 # =============================================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
@@ -70,9 +70,9 @@ html, body, [class*="css"] {
     color: #ff8c32; margin-bottom: 1rem; opacity: 0.9;
 }
 .hero h1 {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Syne', sans-serif;
     font-size: clamp(2.8rem, 6vw, 5rem);
-    font-weight: 700; line-height: 1.0; letter-spacing: -0.03em;
+    font-weight: 800; line-height: 1.0; letter-spacing: -0.03em;
     color: #f0ebe0; margin: 0 0 1rem;
 }
 .hero h1 span { color: #ff8c32; }
@@ -157,7 +157,7 @@ html, body, [class*="css"] {
 
 .step-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.2rem; }
 .step-num { font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 500; letter-spacing: 0.15em; color: #ff8c32; opacity: 0.7; }
-.step-title { font-family: 'Poppins', sans-serif; font-size: 0.95rem; font-weight: 600; color: #f0ebe0; }
+.step-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: #f0ebe0; }
 .step-status { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; }
 .status-waiting { color: #555; }
 .status-running { color: #ff8c32; }
