@@ -523,8 +523,6 @@ if st.session_state.view == "home":
             st.session_state.chat_history = []
             st.session_state.queries_asked = 0
             p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
-            st.success("Knowledge base ready — taking you to chat…")
-            time.sleep(0.6)
             st.session_state.view = "chat"
             st.rerun()
         except Exception as e:
