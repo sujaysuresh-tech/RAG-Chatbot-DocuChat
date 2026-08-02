@@ -35,7 +35,7 @@ st.set_page_config(
     page_title="DocuChat · RAG Document Intelligence",
     page_icon="📄",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded" if st.session_state.get("retriever") is not None else "collapsed",
 )
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
@@ -66,6 +66,15 @@ html, body {
 }
 
 #MainMenu, footer, header { visibility: hidden; }
+
+/* ── Sidebar (doc management, appears after a successful upload) ── */
+[data-testid="stSidebar"] {
+    background: #0d0d12 !important;
+    border-right: 1px solid rgba(255,255,255,0.07);
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+    color: #e8e4dc;
+}
 .block-container { padding: 2rem 3rem 4rem; max-width: 1200px; }
 
 /* ── Hero ── */
@@ -500,7 +509,6 @@ def init_session_state():
         "num_pages": 0,
         "queries_asked": 0,
         "last_query": None,
-        "view": "home",
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -567,10 +575,121 @@ def estimate_relevance(vectorstore, query: str):
 
 
 # =============================================================================
-# HOME PAGE — hero, upload, pipeline
+# SHARED UPLOAD CONTROLS (used on the landing page, and later in the sidebar)
 # =============================================================================
-if st.session_state.view == "home":
+def render_upload_controls(location: str):
+    """Renders the Upload File / Paste Link tabs. `location` is just a key
+    suffix ('main' or 'sidebar') so widget keys stay unique."""
+    tab_file, tab_link = st.tabs(["Upload File", "Paste Link"])
+    build_clicked = False
+    pending_files = []  # list of (display_name, local_temp_path)
 
+    with tab_file:
+        uploaded_files = st.file_uploader(
+            "Upload PDFs", type="pdf", accept_multiple_files=True,
+            label_visibility="collapsed", key=f"uploader_{location}",
+        )
+        if uploaded_files:
+            st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
+        else:
+            st.caption("No file selected yet.")
+        if st.button("Build Knowledge Base", use_container_width=True,
+                     disabled=not uploaded_files, key=f"build_btn_{location}"):
+            for f in uploaded_files:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(f.getvalue())
+                    pending_files.append((f.name, tmp_file.name))
+            build_clicked = True
+
+    with tab_link:
+        st.caption("Trouble uploading on mobile? Paste a direct link to a PDF instead (Google Drive/Dropbox direct-download link, or any public PDF URL).")
+        pdf_url = st.text_input(
+            "PDF URL", placeholder="https://example.com/document.pdf",
+            label_visibility="collapsed", key=f"url_input_{location}",
+        )
+        if st.button("Fetch & Build from Link", use_container_width=True,
+                     disabled=not pdf_url, key=f"url_btn_{location}"):
+            try:
+                with st.spinner("Downloading PDF…"):
+                    resp = requests.get(pdf_url, timeout=30)
+                    resp.raise_for_status()
+                    content_type = resp.headers.get("Content-Type", "").lower()
+                    if "pdf" not in content_type and not pdf_url.lower().endswith(".pdf"):
+                        st.warning("This link doesn't look like a direct PDF file — trying anyway.")
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(resp.content)
+                        name = pdf_url.rstrip("/").split("/")[-1] or "document.pdf"
+                        if not name.lower().endswith(".pdf"):
+                            name += ".pdf"
+                        pending_files.append((name, tmp_file.name))
+                build_clicked = True
+            except Exception as e:
+                st.error(f"Couldn't fetch that link: {e}")
+
+    return build_clicked, pending_files
+
+
+def process_upload(pending_files, placeholders):
+    """Runs the load → split → embed → index pipeline, updating the four
+    step-card placeholders as it goes, then reruns the app."""
+    p1, p2, p3, p4 = placeholders
+
+    p1.markdown(step_card_html("01", "Load Documents", "running"), unsafe_allow_html=True)
+    all_docs = []
+    for _name, file_path in pending_files:
+        try:
+            loader = PyPDFLoader(file_path)
+            all_docs.extend(loader.load())
+        finally:
+            os.unlink(file_path)
+    p1.markdown(step_card_html("01", "Load Documents", "done", f"{len(all_docs)} pages parsed"), unsafe_allow_html=True)
+
+    p2.markdown(step_card_html("02", "Split into Chunks", "running"), unsafe_allow_html=True)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = splitter.split_documents(all_docs)
+    p2.markdown(step_card_html("02", "Split into Chunks", "done", f"{len(chunks)} chunks created"), unsafe_allow_html=True)
+
+    p3.markdown(step_card_html("03", "Generate Embeddings", "running"), unsafe_allow_html=True)
+    embeddings = load_embedding_model()
+    p3.markdown(step_card_html("03", "Generate Embeddings", "done", "Embedding model ready"), unsafe_allow_html=True)
+
+    p4.markdown(step_card_html("04", "Build Vector Index", "running"), unsafe_allow_html=True)
+    try:
+        # Fresh in-memory client + uniquely-named collection every time, so
+        # old documents never leak into a new session's answers.
+        chroma_client = get_ephemeral_chroma_client()
+        collection_name = f"docuchat_{uuid.uuid4().hex}"
+        vectorstore = Chroma.from_documents(
+            documents=chunks,
+            embedding=embeddings,
+            client=chroma_client,
+            collection_name=collection_name,
+        )
+        retriever = vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
+        )
+        st.session_state.vectorstore = vectorstore
+        st.session_state.retriever = retriever
+        st.session_state.num_chunks = len(chunks)
+        st.session_state.num_pages = len(all_docs)
+        st.session_state.doc_names = [name for name, _ in pending_files]
+        st.session_state.chat_history = []
+        st.session_state.queries_asked = 0
+        p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
+        st.rerun()
+    except Exception as e:
+        p4.markdown(step_card_html("04", "Build Vector Index", "waiting", "Failed — see error below"), unsafe_allow_html=True)
+        st.error(f"Couldn't build the index: {e}")
+
+
+# =============================================================================
+# ROUTING — landing page until a document is indexed, then sidebar + chat
+# =============================================================================
+ready = st.session_state.retriever is not None
+
+if not ready:
+    # ---------------- LANDING PAGE (no sidebar) ----------------
     st.markdown("""
     <div class="hero">
         <div class="hero-eyebrow">Retrieval Augmented Generation</div>
@@ -582,175 +701,57 @@ if st.session_state.view == "home":
     </div>
     """, unsafe_allow_html=True)
 
-    # ---- Upload ----
     _sp1, upload_col, _sp2 = st.columns([1, 2, 1])
     with upload_col:
-        tab_file, tab_link = st.tabs(["Upload File", "Paste Link"])
+        build_clicked, pending_files = render_upload_controls("main")
 
-        build_clicked = False
-        pending_files = []  # list of (display_name, local_temp_path)
-
-        with tab_file:
-            uploaded_files = st.file_uploader(
-                "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
-            )
-            if uploaded_files:
-                st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
-            else:
-                st.caption("No file selected yet.")
-
-            index_ready = st.session_state.retriever is not None
-            if index_ready:
-                btn_col, del_col = st.columns([3, 1])
-                with btn_col:
-                    if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
-                        for f in uploaded_files:
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                                tmp_file.write(f.getvalue())
-                                pending_files.append((f.name, tmp_file.name))
-                        build_clicked = True
-                with del_col:
-                    if st.button("Delete", use_container_width=True):
-                        st.session_state.retriever = None
-                        st.session_state.vectorstore = None
-                        st.session_state.doc_names = []
-                        st.session_state.num_chunks = 0
-                        st.session_state.num_pages = 0
-                        st.session_state.chat_history = []
-                        st.session_state.queries_asked = 0
-                        st.session_state.view = "home"
-                        st.rerun()
-            else:
-                if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
-                    for f in uploaded_files:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                            tmp_file.write(f.getvalue())
-                            pending_files.append((f.name, tmp_file.name))
-                    build_clicked = True
-
-        with tab_link:
-            st.caption("Trouble uploading on mobile? Paste a direct link to a PDF instead (Google Drive/Dropbox direct-download link, or any public PDF URL).")
-            pdf_url = st.text_input(
-                "PDF URL", placeholder="https://example.com/document.pdf", label_visibility="collapsed"
-            )
-            if st.button("Fetch & Build from Link", use_container_width=True, disabled=not pdf_url):
-                try:
-                    with st.spinner("Downloading PDF…"):
-                        resp = requests.get(pdf_url, timeout=30)
-                        resp.raise_for_status()
-                        content_type = resp.headers.get("Content-Type", "").lower()
-                        if "pdf" not in content_type and not pdf_url.lower().endswith(".pdf"):
-                            st.warning("This link doesn't look like a direct PDF file — trying anyway.")
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                            tmp_file.write(resp.content)
-                            name = pdf_url.rstrip("/").split("/")[-1] or "document.pdf"
-                            if not name.lower().endswith(".pdf"):
-                                name += ".pdf"
-                            pending_files.append((name, tmp_file.name))
-                    build_clicked = True
-                except Exception as e:
-                    st.error(f"Couldn't fetch that link: {e}")
-
-        if st.session_state.doc_names:
-            chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
-            st.markdown(
-                f'<div class="chip-row"><span class="chip-label">INDEXED →&nbsp;</span>{chips}</div>',
-                unsafe_allow_html=True,
-            )
-            if st.button("Go to Chat →", use_container_width=True):
-                st.session_state.view = "chat"
-                st.rerun()
-
-    # ---- Pipeline ----
     st.markdown('<div class="section-heading">Pipeline</div>', unsafe_allow_html=True)
     pc1, pc2, pc3, pc4 = st.columns(4)
-    p1 = pc1.empty()
-    p2 = pc2.empty()
-    p3 = pc3.empty()
-    p4 = pc4.empty()
-
-    ready = st.session_state.retriever is not None
-    initial_state = "done" if ready else "waiting"
-    p1.markdown(step_card_html("01", "Load Documents", initial_state), unsafe_allow_html=True)
-    p2.markdown(step_card_html("02", "Split into Chunks", initial_state), unsafe_allow_html=True)
-    p3.markdown(step_card_html("03", "Generate Embeddings", initial_state), unsafe_allow_html=True)
-    p4.markdown(step_card_html("04", "Build Vector Index", initial_state), unsafe_allow_html=True)
+    p1, p2, p3, p4 = pc1.empty(), pc2.empty(), pc3.empty(), pc4.empty()
+    p1.markdown(step_card_html("01", "Load Documents", "waiting"), unsafe_allow_html=True)
+    p2.markdown(step_card_html("02", "Split into Chunks", "waiting"), unsafe_allow_html=True)
+    p3.markdown(step_card_html("03", "Generate Embeddings", "waiting"), unsafe_allow_html=True)
+    p4.markdown(step_card_html("04", "Build Vector Index", "waiting"), unsafe_allow_html=True)
 
     if build_clicked and pending_files:
-        # ── Step 1: load ──
-        p1.markdown(step_card_html("01", "Load Documents", "running"), unsafe_allow_html=True)
-        all_docs = []
-        for _name, file_path in pending_files:
-            try:
-                loader = PyPDFLoader(file_path)
-                all_docs.extend(loader.load())
-            finally:
-                os.unlink(file_path)
-        p1.markdown(step_card_html("01", "Load Documents", "done", f"{len(all_docs)} pages parsed"), unsafe_allow_html=True)
+        process_upload(pending_files, (p1, p2, p3, p4))
 
-        # ── Step 2: split ──
-        p2.markdown(step_card_html("02", "Split into Chunks", "running"), unsafe_allow_html=True)
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        chunks = splitter.split_documents(all_docs)
-        p2.markdown(step_card_html("02", "Split into Chunks", "done", f"{len(chunks)} chunks created"), unsafe_allow_html=True)
+    st.markdown("""
+    <div class="notice">
+        DocuChat · Powered by LangChain · RAG
+    </div>
+    """, unsafe_allow_html=True)
 
-        # ── Step 3: embed ──
-        p3.markdown(step_card_html("03", "Generate Embeddings", "running"), unsafe_allow_html=True)
-        embeddings = load_embedding_model()
-        p3.markdown(step_card_html("03", "Generate Embeddings", "done", "Embedding model ready"), unsafe_allow_html=True)
+else:
+    # ---------------- SIDEBAR: appears only once a document is indexed ----------------
+    with st.sidebar:
+        st.markdown('<div class="hero-eyebrow" style="text-align:left;">DocuChat</div>', unsafe_allow_html=True)
 
-        # ── Step 4: index ──
-        p4.markdown(step_card_html("04", "Build Vector Index", "running"), unsafe_allow_html=True)
-        try:
-            # Use a fresh in-memory client + uniquely-named collection every
-            # time. Without this, Chroma's default client can fall back to a
-            # shared on-disk location, which persists across sessions/users
-            # and causes old documents' chunks to leak into new answers.
-            chroma_client = get_ephemeral_chroma_client()
-            collection_name = f"docuchat_{uuid.uuid4().hex}"
-            vectorstore = Chroma.from_documents(
-                documents=chunks,
-                embedding=embeddings,
-                client=chroma_client,
-                collection_name=collection_name,
-            )
-            retriever = vectorstore.as_retriever(
-                search_type="mmr",
-                search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
-            )
-            st.session_state.vectorstore = vectorstore
-            st.session_state.retriever = retriever
-            st.session_state.num_chunks = len(chunks)
-            st.session_state.num_pages = len(all_docs)
-            st.session_state.doc_names = [name for name, _ in pending_files]
-            st.session_state.chat_history = []
-            st.session_state.queries_asked = 0
-            p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
-            st.session_state.view = "chat"
-            st.rerun()
-        except Exception as e:
-            p4.markdown(step_card_html("04", "Build Vector Index", "waiting", "Failed — see error below"), unsafe_allow_html=True)
-            st.error(f"Couldn't build the index: {e}")
-
-
-# =============================================================================
-# CHAT PAGE
-# =============================================================================
-elif st.session_state.view == "chat" and st.session_state.retriever is not None:
-    back_col, chips_col = st.columns([1, 6])
-    with back_col:
-        st.markdown('<div class="back-btn-wrap">', unsafe_allow_html=True)
-        if st.button("←", key="back_to_home", help="Back to upload"):
-            st.session_state.view = "home"
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with chips_col:
         chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
         st.markdown(
             f'<div class="chip-row"><span class="chip-label">INDEXED →&nbsp;</span>{chips}</div>',
             unsafe_allow_html=True,
         )
+        st.caption(f"{st.session_state.num_pages} pages · {st.session_state.num_chunks} chunks")
 
+        if st.button("Delete Index", use_container_width=True):
+            st.session_state.retriever = None
+            st.session_state.vectorstore = None
+            st.session_state.doc_names = []
+            st.session_state.num_chunks = 0
+            st.session_state.num_pages = 0
+            st.session_state.chat_history = []
+            st.session_state.queries_asked = 0
+            st.rerun()
+
+        st.markdown('<div class="section-heading" style="font-size:1rem; margin:1.4rem 0 0.6rem;">Add More Documents</div>', unsafe_allow_html=True)
+        build_clicked, pending_files = render_upload_controls("sidebar")
+
+        sp1, sp2, sp3, sp4 = st.empty(), st.empty(), st.empty(), st.empty()
+        if build_clicked and pending_files:
+            process_upload(pending_files, (sp1, sp2, sp3, sp4))
+
+    # ---------------- MAIN: chat ----------------
     def render_source_details(sources) -> str:
         if not sources:
             return ""
@@ -814,15 +815,3 @@ elif st.session_state.view == "chat" and st.session_state.retriever is not None:
             }
         )
         st.rerun()
-
-else:
-    st.session_state.view = "home"
-    st.rerun()
-
-
-if st.session_state.view == "home":
-    st.markdown("""
-    <div class="notice">
-        DocuChat · Powered by LangChain · RAG
-    </div>
-    """, unsafe_allow_html=True)
