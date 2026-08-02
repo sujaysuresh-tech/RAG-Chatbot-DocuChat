@@ -69,9 +69,9 @@ html, body, [class*="css"] {
     color: #ff8c32; margin-bottom: 1rem; opacity: 0.9;
 }
 .hero h1 {
-    font-family: 'DM Mono', monospace;
-    font-size: clamp(2.4rem, 5vw, 4.2rem);
-    font-weight: 500; line-height: 1.05; letter-spacing: -0.01em;
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800; line-height: 1.0; letter-spacing: -0.03em;
     color: #f0ebe0; margin: 0 0 1rem;
 }
 .hero h1 span { color: #ff8c32; }
