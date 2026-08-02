@@ -251,6 +251,17 @@ html, body {
     border: none !important;
     box-shadow: none !important;
 }
+[data-testid="stBottom"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stBottomBlockContainer"] {
+    padding: 0 !important;
+    position: static !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
 
 /* ── Alerts / expanders ── */
 [data-testid="stAlertContentSuccess"] {
