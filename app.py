@@ -230,19 +230,28 @@ html, body {
 /* ── Chat input ── */
 [data-testid="stChatInput"] { background: transparent !important; }
 [data-testid="stChatInput"] textarea {
-    background: rgba(255,255,255,0.04) !important;
+    background: transparent !important;
     color: #f0ebe0 !important;
-    border: 1px solid rgba(255,140,50,0.25) !important;
-    border-radius: 20px !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255,140,50,0.2) !important;
+    border-radius: 0 !important;
     font-family: 'DM Sans', sans-serif !important;
 }
 [data-testid="stChatInput"] textarea:focus {
-    border-color: #ff8c32 !important;
-    box-shadow: 0 0 0 3px rgba(255,140,50,0.12) !important;
+    border-color: transparent !important;
+    border-bottom-color: #ff8c32 !important;
+    box-shadow: none !important;
 }
 [data-testid="stChatInputSubmitButton"] {
     background: linear-gradient(135deg, #ff8c32 0%, #ff5a1a 100%) !important;
     border-radius: 50% !important;
+}
+[data-testid="stBottomBlockContainer"],
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* ── Alerts / expanders ── */
