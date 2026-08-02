@@ -78,6 +78,7 @@ html, body, [class*="css"] {
 .hero-sub {
     font-size: 1.05rem; font-weight: 300; color: #a09890;
     max-width: 520px; margin: 0 auto; line-height: 1.65;
+    text-align: center;
 }
 
 .divider {
@@ -386,7 +387,7 @@ st.markdown("""
     <h1>Docu<span>Chat</span></h1>
     <p class="hero-sub">
         Upload your documents and get answers grounded strictly in their
-        content — powered by semantic retrieval and Mistral.
+        content.
     </p>
 </div>
 <div class="divider"></div>
