@@ -452,7 +452,7 @@ if st.session_state.view == "home":
     # ---- Upload ----
     _sp1, upload_col, _sp2 = st.columns([1, 2, 1])
     with upload_col:
-        tab_file, tab_link = st.tabs(["📁 Upload File", "🔗 Paste Link"])
+        tab_file, tab_link = st.tabs(["Upload File", "Paste Link"])
 
         build_clicked = False
         pending_files = []  # list of (display_name, local_temp_path)
@@ -465,7 +465,7 @@ if st.session_state.view == "home":
                 st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
             else:
                 st.caption("No file selected yet.")
-            if st.button("⚡  Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
+            if st.button("Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
                 for f in uploaded_files:
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                         tmp_file.write(f.getvalue())
@@ -477,7 +477,7 @@ if st.session_state.view == "home":
             pdf_url = st.text_input(
                 "PDF URL", placeholder="https://example.com/document.pdf", label_visibility="collapsed"
             )
-            if st.button("⚡  Fetch & Build from Link", use_container_width=True, disabled=not pdf_url):
+            if st.button("Fetch & Build from Link", use_container_width=True, disabled=not pdf_url):
                 try:
                     with st.spinner("Downloading PDF…"):
                         resp = requests.get(pdf_url, timeout=30)
