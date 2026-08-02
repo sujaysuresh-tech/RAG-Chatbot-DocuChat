@@ -10,8 +10,10 @@ Run with: streamlit run app.py
 import os
 import tempfile
 import time
+import uuid
 from datetime import datetime
 
+import chromadb
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -506,6 +508,16 @@ Question:
 )
 
 
+def get_ephemeral_chroma_client():
+    """Fresh, in-memory-only Chroma client. Falls back for older chromadb
+    versions that predate EphemeralClient()."""
+    try:
+        return chromadb.EphemeralClient()
+    except AttributeError:
+        from chromadb.config import Settings
+        return chromadb.Client(Settings(is_persistent=False))
+
+
 def estimate_relevance(vectorstore, query: str):
     """Real relevance readout from similarity scores — purely additive,
     does not change what context is fed to the LLM."""
@@ -653,7 +665,18 @@ if st.session_state.view == "home":
         # ── Step 4: index ──
         p4.markdown(step_card_html("04", "Build Vector Index", "running"), unsafe_allow_html=True)
         try:
-            vectorstore = Chroma.from_documents(documents=chunks, embedding=embeddings)
+            # Use a fresh in-memory client + uniquely-named collection every
+            # time. Without this, Chroma's default client can fall back to a
+            # shared on-disk location, which persists across sessions/users
+            # and causes old documents' chunks to leak into new answers.
+            chroma_client = get_ephemeral_chroma_client()
+            collection_name = f"docuchat_{uuid.uuid4().hex}"
+            vectorstore = Chroma.from_documents(
+                documents=chunks,
+                embedding=embeddings,
+                client=chroma_client,
+                collection_name=collection_name,
+            )
             retriever = vectorstore.as_retriever(
                 search_type="mmr",
                 search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
