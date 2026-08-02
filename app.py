@@ -51,18 +51,23 @@ html, body, [class*="css"] {
     color: #e8e4dc;
 }
 
+html, body {
+    overflow-x: hidden;
+}
+
 .stApp {
     background: #0a0a0f;
     background-image:
         radial-gradient(ellipse 80% 50% at 20% -10%, rgba(255,140,50,0.12) 0%, transparent 60%),
         radial-gradient(ellipse 60% 40% at 80% 110%, rgba(255,80,30,0.08) 0%, transparent 55%);
+    overflow-x: hidden;
 }
 
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { padding: 2rem 3rem 4rem; max-width: 1200px; }
 
 /* ── Hero ── */
-.hero { text-align: center; padding: 3.5rem 0 2.5rem; }
+.hero { text-align: center; padding: 3.5rem 0 2.5rem; max-width: 100%; }
 .hero-eyebrow {
     font-family: 'DM Mono', monospace;
     font-size: 0.7rem; font-weight: 500;
@@ -71,9 +76,11 @@ html, body, [class*="css"] {
 }
 .hero h1 {
     font-family: 'Syne', sans-serif;
-    font-size: clamp(2.8rem, 6vw, 5rem);
-    font-weight: 800; line-height: 1.0; letter-spacing: -0.03em;
+    font-size: clamp(2.1rem, 9vw, 5rem);
+    font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
     color: #f0ebe0; margin: 0 0 1rem;
+    word-break: break-word;
+    max-width: 100%;
 }
 .hero h1 span { color: #ff8c32; }
 .hero-sub {
@@ -285,7 +292,7 @@ details summary {
     text-align: center; margin-top: 3rem; letter-spacing: 0.08em;
 }
 
-/* ── Mobile: force columns to stack full-width ── */
+/* ── Mobile: force columns to stack full-width, tighten the hero ── */
 @media (max-width: 768px) {
     [data-testid="stHorizontalBlock"] {
         flex-direction: column !important;
@@ -297,6 +304,36 @@ details summary {
     }
     .block-container {
         padding: 1.2rem 1rem 3rem !important;
+    }
+    .hero {
+        padding: 1.6rem 0 1.2rem !important;
+    }
+    .hero-eyebrow {
+        font-size: 0.58rem !important;
+        letter-spacing: 0.16em !important;
+    }
+    .hero h1 {
+        font-size: clamp(1.9rem, 11vw, 2.8rem) !important;
+        letter-spacing: -0.02em !important;
+    }
+    .hero-sub {
+        font-size: 0.9rem !important;
+        padding: 0 0.4rem;
+    }
+    .input-card {
+        padding: 1.3rem 1.2rem !important;
+    }
+    .step-card {
+        padding: 1rem 1.1rem !important;
+    }
+    .report-panel, .feedback-panel, .query-panel {
+        padding: 1.2rem 1.3rem !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .hero h1 {
+        font-size: clamp(1.6rem, 12vw, 2.2rem) !important;
     }
 }
 </style>
