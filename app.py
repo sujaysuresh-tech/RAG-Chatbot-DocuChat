@@ -44,10 +44,10 @@ LLM_MODEL_NAME = "mistral-small-2506"
 # =============================================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'DM Mono', monospace;
+    font-family: 'DM Sans', sans-serif;
     color: #e8e4dc;
 }
 
@@ -75,7 +75,7 @@ html, body {
     color: #ff8c32; margin-bottom: 1rem; opacity: 0.9;
 }
 .hero h1 {
-    font-family: 'DM Mono', monospace;
+    font-family: 'Syne', sans-serif;
     font-size: clamp(2.1rem, 9vw, 5rem);
     font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
     color: #f0ebe0; margin: 0 0 1rem;
@@ -119,7 +119,7 @@ html, body {
 .stButton > button {
     background: linear-gradient(135deg, #ff8c32 0%, #ff5a1a 100%) !important;
     color: #0a0a0f !important;
-    font-family: 'DM Mono', monospace !important;
+    font-family: 'Syne', sans-serif !important;
     font-weight: 700 !important;
     font-size: 0.95rem !important;
     letter-spacing: 0.04em !important;
@@ -164,7 +164,7 @@ html, body {
 
 .step-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.2rem; }
 .step-num { font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 500; letter-spacing: 0.15em; color: #ff8c32; opacity: 0.7; }
-.step-title { font-family: 'DM Mono', monospace; font-size: 0.95rem; font-weight: 700; color: #f0ebe0; }
+.step-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; color: #f0ebe0; }
 .step-status { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; }
 .status-waiting { color: #555; }
 .status-running { color: #ff8c32; }
@@ -221,7 +221,7 @@ html, body {
 }
 
 .section-heading {
-    font-family: 'DM Mono', monospace; font-size: 1.3rem; font-weight: 700;
+    font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700;
     color: #f0ebe0; margin: 1.5rem 0 1rem;
 }
 
@@ -232,7 +232,7 @@ html, body {
     color: #f0ebe0 !important;
     border: 1px solid rgba(255,140,50,0.25) !important;
     border-radius: 20px !important;
-    font-family: 'DM Mono', monospace !important;
+    font-family: 'DM Sans', sans-serif !important;
 }
 [data-testid="stChatInput"] textarea:focus {
     border-color: #ff8c32 !important;
@@ -279,7 +279,7 @@ details summary {
     padding: 0.25rem 0.7rem;
     font-size: 0.75rem;
     color: #a09890;
-    font-family: 'DM Mono', monospace;
+    font-family: 'DM Sans', sans-serif;
 }
 .chip-label {
     font-family: 'DM Mono', monospace; font-size: 0.68rem;
