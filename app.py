@@ -432,9 +432,9 @@ details summary {
 }
 
 .msg-bubble {
-    padding: 0.7rem 1.1rem;
+    padding: 0.55rem 0.9rem;
     border-radius: 14px;
-    max-width: 78%;
+    max-width: 62%;
     font-size: 14.5px;
     line-height: 1.55;
     word-wrap: break-word;
