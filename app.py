@@ -144,6 +144,25 @@ html, body {
     box-shadow: none !important;
 }
 
+/* ── Small back button ── */
+.back-btn-wrap .stButton > button {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,0.04) !important;
+    color: #e8e4dc !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+}
+.back-btn-wrap .stButton > button:hover {
+    background: rgba(255,140,50,0.12) !important;
+    color: #ff8c32 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* ── Pipeline step cards ── */
 .step-card {
     background: rgba(255,255,255,0.03);
@@ -720,9 +739,11 @@ if st.session_state.view == "home":
 elif st.session_state.view == "chat" and st.session_state.retriever is not None:
     top_a, top_b = st.columns([1, 5])
     with top_a:
-        if st.button("← Back", use_container_width=True):
+        st.markdown('<div class="back-btn-wrap">', unsafe_allow_html=True)
+        if st.button("←", key="back_btn"):
             st.session_state.view = "home"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     with top_b:
         chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
         st.markdown(
