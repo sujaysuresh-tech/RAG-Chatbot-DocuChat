@@ -12,6 +12,7 @@ import tempfile
 import time
 from datetime import datetime
 
+import requests
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
@@ -20,12 +21,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_mistralai import ChatMistralAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-# Temporary debug lines to see if Streamlit Cloud is listening to your config
-st.write("--- SERVER DIAGNOSTICS ---")
-st.write("Is XSRF Protection Disabled?", st.get_option("server.enableXsrfProtection") == False)
-st.write("Is CORS Disabled?", st.get_option("server.enableCORS") == False)
-st.write("---------------------------")
 
 load_dotenv()
 
@@ -421,16 +416,48 @@ if st.session_state.view == "home":
     # ---- Upload ----
     _sp1, upload_col, _sp2 = st.columns([1, 2, 1])
     with upload_col:
-        uploaded_files = st.file_uploader(
-            "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
-        )
-        if uploaded_files:
-            st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
-        else:
-            st.caption("No file selected yet.")
-        build_clicked = st.button(
-            "⚡  Build Knowledge Base", use_container_width=True, disabled=not uploaded_files
-        )
+        tab_file, tab_link = st.tabs(["📁 Upload File", "🔗 Paste Link"])
+
+        build_clicked = False
+        pending_files = []  # list of (display_name, local_temp_path)
+
+        with tab_file:
+            uploaded_files = st.file_uploader(
+                "Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed"
+            )
+            if uploaded_files:
+                st.caption(f"✅ {len(uploaded_files)} file(s) received: " + ", ".join(f.name for f in uploaded_files))
+            else:
+                st.caption("No file selected yet.")
+            if st.button("⚡  Build from Uploaded File(s)", use_container_width=True, disabled=not uploaded_files):
+                for f in uploaded_files:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(f.getvalue())
+                        pending_files.append((f.name, tmp_file.name))
+                build_clicked = True
+
+        with tab_link:
+            st.caption("Trouble uploading on mobile? Paste a direct link to a PDF instead (Google Drive/Dropbox direct-download link, or any public PDF URL).")
+            pdf_url = st.text_input(
+                "PDF URL", placeholder="https://example.com/document.pdf", label_visibility="collapsed"
+            )
+            if st.button("⚡  Fetch & Build from Link", use_container_width=True, disabled=not pdf_url):
+                try:
+                    with st.spinner("Downloading PDF…"):
+                        resp = requests.get(pdf_url, timeout=30)
+                        resp.raise_for_status()
+                        content_type = resp.headers.get("Content-Type", "").lower()
+                        if "pdf" not in content_type and not pdf_url.lower().endswith(".pdf"):
+                            st.warning("This link doesn't look like a direct PDF file — trying anyway.")
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                            tmp_file.write(resp.content)
+                            name = pdf_url.rstrip("/").split("/")[-1] or "document.pdf"
+                            if not name.lower().endswith(".pdf"):
+                                name += ".pdf"
+                            pending_files.append((name, tmp_file.name))
+                    build_clicked = True
+                except Exception as e:
+                    st.error(f"Couldn't fetch that link: {e}")
 
         if st.session_state.doc_names:
             chips = "".join(f'<span class="doc-chip">{name}</span>' for name in st.session_state.doc_names)
@@ -457,14 +484,11 @@ if st.session_state.view == "home":
     p3.markdown(step_card_html("03", "Generate Embeddings", initial_state, "MiniLM-L6-v2, local"), unsafe_allow_html=True)
     p4.markdown(step_card_html("04", "Build Vector Index", initial_state, "Chroma · MMR retriever"), unsafe_allow_html=True)
 
-    if build_clicked and uploaded_files:
+    if build_clicked and pending_files:
         # ── Step 1: load ──
         p1.markdown(step_card_html("01", "Load Documents", "running", "Parses each PDF page by page"), unsafe_allow_html=True)
         all_docs = []
-        for uploaded_file in uploaded_files:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                file_path = tmp_file.name
+        for _name, file_path in pending_files:
             try:
                 loader = PyPDFLoader(file_path)
                 all_docs.extend(loader.load())
@@ -495,7 +519,7 @@ if st.session_state.view == "home":
             st.session_state.retriever = retriever
             st.session_state.num_chunks = len(chunks)
             st.session_state.num_pages = len(all_docs)
-            st.session_state.doc_names = [f.name for f in uploaded_files]
+            st.session_state.doc_names = [name for name, _ in pending_files]
             st.session_state.chat_history = []
             st.session_state.queries_asked = 0
             p4.markdown(step_card_html("04", "Build Vector Index", "done", "Index ready"), unsafe_allow_html=True)
