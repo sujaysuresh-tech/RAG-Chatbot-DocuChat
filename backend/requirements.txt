@@ -1,3 +1,6 @@
+fastapi
+uvicorn
+python-multipart
 langchain
 langchain-community
 langchain-core
@@ -12,15 +15,5 @@ torch
 chromadb
 langchain-chroma
 pypdf
-unstructured
-python-docx
-beautifulsoup4
-lxml
-python-dotenv
-tiktoken
-numpy
-pandas
-fastapi
-uvicorn
-streamlit
 requests
+python-dotenv
