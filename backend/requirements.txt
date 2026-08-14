@@ -9,11 +9,9 @@ mistralai
 langchain-mistralai
 huggingface-hub
 langchain-huggingface
-sentence-transformers
-transformers
-torch
 chromadb
 langchain-chroma
 pypdf
 requests
 python-dotenv
+

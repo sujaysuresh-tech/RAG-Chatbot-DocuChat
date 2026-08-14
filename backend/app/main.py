@@ -13,7 +13,7 @@ import chromadb
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_mistralai import ChatMistralAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -36,8 +36,13 @@ EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "mistral-small-2506"
 
 print("Initializing Embedding Model...")
-embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+embeddings = HuggingFaceEndpointEmbeddings(
+    model=EMBEDDING_MODEL_NAME,
+    task="feature-extraction",
+    huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
+)
 print("Embedding Model initialized.")
+
 
 # Global in-memory Ephemeral Chroma client
 chroma_client = chromadb.EphemeralClient()
