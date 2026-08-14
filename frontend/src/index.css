@@ -6,11 +6,12 @@
   --text-light: #f0ebe0;
   --text-muted: #a09890;
   --text-dim: #706860;
-  --orange: #ff8c32;
-  --orange-dark: #ff5a1a;
+  /* Accent Colors (Redefined from orange to blue #3B82F6) */
+  --orange: #3B82F6;
+  --orange-dark: #1d4ed8;
   --green: #50c878;
   --border-color: rgba(255, 255, 255, 0.07);
-  --border-orange: rgba(255, 140, 50, 0.15);
+  --border-orange: rgba(59, 130, 246, 0.15);
   --border-green: rgba(80, 200, 120, 0.15);
   --font-sans: 'DM Sans', sans-serif;
   --font-mono: 'DM Mono', monospace;
@@ -44,9 +45,10 @@ html, body {
   flex-direction: column;
   background: var(--bg-color);
   background-image:
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(255,140,50,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(255,80,30,0.08) 0%, transparent 55%);
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(29,78,216,0.08) 0%, transparent 55%);
 }
+
 
 .layout-main {
   flex: 1;
