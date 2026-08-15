@@ -599,10 +599,12 @@ html, body {
 /* Markdown rendering inside bot messages */
 .markdown-body {
   width: 100%;
+  color: #ffffff;
 }
 
 .markdown-body p {
   margin: 0 0 0.6rem 0;
+  color: #ffffff;
 }
 
 .markdown-body p:last-child {
@@ -610,12 +612,13 @@ html, body {
 }
 
 .markdown-body strong {
-  color: var(--orange);
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .markdown-body em {
   font-style: italic;
+  color: #ffffff;
 }
 
 .markdown-body ul,
@@ -626,10 +629,15 @@ html, body {
 
 .markdown-body li {
   margin-bottom: 0.3rem;
+  color: #ffffff;
 }
 
 .markdown-body li:last-child {
   margin-bottom: 0;
+}
+
+.markdown-body .katex {
+  color: #ffffff;
 }
 
 .markdown-body code {
@@ -655,14 +663,15 @@ html, body {
 }
 
 .markdown-body blockquote {
-  border-left: 3px solid var(--orange);
+  border-left: 3px solid #ffffff;
   margin: 0.5rem 0;
   padding-left: 0.8rem;
-  color: var(--text-dim);
+  color: #d0d0d0;
 }
 
 .markdown-body a {
-  color: var(--orange);
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .markdown-body table {
