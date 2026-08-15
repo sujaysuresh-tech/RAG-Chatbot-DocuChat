@@ -54,10 +54,12 @@ PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a helpful AI assistant that answers questions using ONLY the provided context (excerpts from the user's uploaded document).
+            """You are a helpful AI assistant that answers questions using ONLY the provided context (excerpts from the user's uploaded document(s)).
 
+- Each excerpt in the context is labeled with its source filename and page number, like "[Source: file.pdf, Page 2]".
+- If multiple different files appear in the context, mention which file(s) your answer is based on (e.g. "According to report.pdf, ..."). If there is only one file, you don't need to repeat its name every time.
 - If the user asks a specific factual question and the answer is not present in the context, say: "I could not find the answer in the document."
-- If the user gives an open-ended or general request (e.g. "explain", "explain this", "summarize", "what is this about", "give me an overview"), do NOT treat it as a missing-answer case. Instead, use the provided context to explain or summarize what it covers, in your own words, as clearly and helpfully as possible.
+- If the user gives an open-ended or general request (e.g. "explain", "explain this", "summarize", "what is this about", "give me an overview"), do NOT treat it as a missing-answer case. Instead, use the provided context to explain or summarize what it covers, in your own words, as clearly and helpfully as possible. If multiple files are present, organize the summary by file where it makes sense.
 - Never invent facts that aren't in the context, but do your best to be helpful with whatever context is provided.
 """,
         ),
@@ -146,6 +148,11 @@ async def upload_files(
         try:
             loader = PyPDFLoader(tmp_file_path)
             loaded_pages = loader.load()
+            # PyPDFLoader stamps metadata["source"] with the temp file path;
+            # overwrite it with the original filename so downstream sources
+            # (chat citations) show the real PDF name instead of a temp path.
+            for page in loaded_pages:
+                page.metadata["source"] = file.filename
             all_docs.extend(loaded_pages)
             new_doc_names.append(file.filename)
         except Exception as e:
@@ -324,7 +331,10 @@ async def query_index(req: QueryRequest):
 
         start_time = time.time()
         docs = retriever.invoke(retrieval_query)
-        context = "\n\n".join(doc.page_content for doc in docs)
+        context = "\n\n".join(
+            f"[Source: {d.metadata.get('source', 'unknown')}, Page {d.metadata.get('page', '?')}]\n{d.page_content}"
+            for d in docs
+        )
 
         final_prompt = PROMPT.invoke({"context": context, "question": query})
 
@@ -361,7 +371,11 @@ async def query_index(req: QueryRequest):
         relevance = estimate_relevance(vectorstore, query)
 
         sources = [
-            {"page": d.metadata.get("page", "?"), "text": d.page_content[:300] + "…"}
+            {
+                "source": d.metadata.get("source", "unknown"),
+                "page": d.metadata.get("page", "?"),
+                "text": d.page_content[:300] + "…"
+            }
             for d in docs
         ]
 
