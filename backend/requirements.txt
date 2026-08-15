@@ -3,8 +3,7 @@ uvicorn
 python-multipart
 langchain-core
 langchain-text-splitters
-langchain-mistralai
-langchain-huggingface
+langchain-google-genai
 qdrant-client
 langchain-qdrant
 pypdf
