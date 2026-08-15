@@ -495,7 +495,7 @@ function App() {
                           <summary>View {msg.sources.length} source excerpts</summary>
                           {msg.sources.map((src, i) => (
                             <div key={i} className="source-card">
-                              <b>Source {i + 1} · Page {src.page}</b>
+                              <b>Source {i + 1} · {src.source ? `${src.source} · ` : ''}Page {src.page}</b>
                               {src.text}
                             </div>
                           ))}
