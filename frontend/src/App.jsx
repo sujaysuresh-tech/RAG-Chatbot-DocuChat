@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -578,7 +580,13 @@ function App() {
 
               {chatHistory.map((msg, index) => (
                 <div key={index} className={`msg-bubble ${msg.role === 'user' ? 'user-bubble' : 'bot-bubble'}`}>
-                  <span>{msg.content}</span>
+                  {msg.role === 'assistant' ? (
+                    <div className="markdown-body">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span>{msg.content}</span>
+                  )}
                   {msg.role === 'assistant' && (
                     <>
                       <div className="bubble-meta">
