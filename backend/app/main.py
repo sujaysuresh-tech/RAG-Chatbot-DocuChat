@@ -4,18 +4,17 @@ import uuid
 import tempfile
 import requests
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from pypdf import PdfReader
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
-from langchain_core.documents import Document
-from langchain_qdrant import QdrantVectorStore
+import chromadb
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_mistralai import ChatMistralAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Load environment variables
@@ -33,77 +32,23 @@ app.add_middleware(
 )
 
 # Models and Client Initialization
-EMBEDDING_MODEL_NAME = "models/gemini-embedding-001"
-EMBEDDING_DIM = 768  # truncated via output_dimensionality — good quality/storage tradeoff
-LLM_MODEL_NAME = "gemini-3.6-flash"
-
-# Two separate Gemini API keys, as requested — one for embeddings, one for the LLM.
-GEMINI_EMBEDDING_API_KEY = os.getenv("GEMINI_EMBEDDING_API_KEY")
-GEMINI_LLM_API_KEY = os.getenv("GEMINI_LLM_API_KEY")
-
-if not GEMINI_EMBEDDING_API_KEY:
-    raise RuntimeError("GEMINI_EMBEDDING_API_KEY is not configured on the backend server.")
-if not GEMINI_LLM_API_KEY:
-    raise RuntimeError("GEMINI_LLM_API_KEY is not configured on the backend server.")
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+LLM_MODEL_NAME = "mistral-small-2506"
 
 print("Initializing Embedding Model...")
-embeddings = GoogleGenerativeAIEmbeddings(
+embeddings = HuggingFaceEndpointEmbeddings(
     model=EMBEDDING_MODEL_NAME,
-    google_api_key=GEMINI_EMBEDDING_API_KEY,
-    output_dimensionality=EMBEDDING_DIM,
+    task="feature-extraction",
+    huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
 )
 print("Embedding Model initialized.")
 
-print("Initializing LLM...")
-llm = ChatGoogleGenerativeAI(
-    model=LLM_MODEL_NAME,
-    google_api_key=GEMINI_LLM_API_KEY,
-)
-print("LLM initialized.")
 
-
-# Global Qdrant client — connects to your Qdrant Cloud cluster.
-# QDRANT_URL / QDRANT_API_KEY must be set as env vars (see cluster dashboard).
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-
-if not QDRANT_URL:
-    raise RuntimeError("QDRANT_URL is not configured. Set it to your Qdrant Cloud cluster URL.")
-
-qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+# Global in-memory Ephemeral Chroma client
+chroma_client = chromadb.EphemeralClient()
 
 # In-memory session metadata registry: session_id -> metadata
 session_metadata = {}
-
-
-def get_vectorstore(collection_name: str, create_if_missing: bool = False) -> QdrantVectorStore:
-    """Return a QdrantVectorStore for the given collection, optionally creating
-    the underlying Qdrant collection first (Qdrant requires the collection to
-    exist before a vector store can attach to it)."""
-    if not qdrant_client.collection_exists(collection_name):
-        if not create_if_missing:
-            raise HTTPException(status_code=404, detail="Session not found or expired. Please upload documents again.")
-        qdrant_client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
-        )
-
-    return QdrantVectorStore(
-        client=qdrant_client,
-        collection_name=collection_name,
-        embedding=embeddings,
-    )
-
-
-def load_pdf(file_path: str) -> List[Document]:
-    """Lightweight PDF loader (pypdf only) — replaces langchain-community's
-    PyPDFLoader so we don't pull that whole dependency tree onto Render."""
-    reader = PdfReader(file_path)
-    docs = []
-    for i, page in enumerate(reader.pages):
-        text = page.extract_text() or ""
-        docs.append(Document(page_content=text, metadata={"page": i, "source": file_path}))
-    return docs
 
 PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -198,7 +143,8 @@ async def upload_files(
 
         # Parse PDF
         try:
-            loaded_pages = load_pdf(tmp_file_path)
+            loader = PyPDFLoader(tmp_file_path)
+            loaded_pages = loader.load()
             all_docs.extend(loaded_pages)
             new_doc_names.append(file.filename)
         except Exception as e:
@@ -215,10 +161,14 @@ async def upload_files(
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_documents(all_docs)
 
-    # Index chunks in Qdrant
+    # Index chunks in Chroma
     try:
         collection_name = f"docuchat_{session_id}"
-        vectorstore = get_vectorstore(collection_name, create_if_missing=True)
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
         vectorstore.add_documents(chunks)
         
         # Update session metadata
@@ -272,7 +222,8 @@ async def upload_url(req: UrlUploadRequest):
 
     # Parse, split, index
     try:
-        all_docs = load_pdf(tmp_file_path)
+        loader = PyPDFLoader(tmp_file_path)
+        all_docs = loader.load()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse PDF: {e}")
     finally:
@@ -287,7 +238,11 @@ async def upload_url(req: UrlUploadRequest):
 
     try:
         collection_name = f"docuchat_{session_id}"
-        vectorstore = get_vectorstore(collection_name, create_if_missing=True)
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
         vectorstore.add_documents(chunks)
 
         meta = session_metadata[session_id]
@@ -315,7 +270,11 @@ async def query_index(req: QueryRequest):
 
     try:
         collection_name = f"docuchat_{session_id}"
-        vectorstore = get_vectorstore(collection_name, create_if_missing=False)
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
 
         # Retrieve documents using MMR
         retriever = vectorstore.as_retriever(
@@ -329,6 +288,13 @@ async def query_index(req: QueryRequest):
 
         final_prompt = PROMPT.invoke({"context": context, "question": query})
 
+        # Initialize LLM
+        # Set api_key explicitly or rely on env
+        mistral_api_key = os.getenv("MISTRAL_API_KEY")
+        if not mistral_api_key:
+            raise HTTPException(status_code=500, detail="MISTRAL_API_KEY is not configured on the backend server.")
+
+        llm = ChatMistralAI(model=LLM_MODEL_NAME, api_key=mistral_api_key)
         response = llm.invoke(final_prompt)
         
         elapsed = round(time.time() - start_time, 2)
@@ -353,10 +319,10 @@ async def query_index(req: QueryRequest):
 async def delete_index(req: DeleteRequest):
     session_id = req.session_id
 
-    # Remove collection if exists in Qdrant
+    # Remove collection if exists in Chroma
     collection_name = f"docuchat_{session_id}"
     try:
-        qdrant_client.delete_collection(collection_name)
+        chroma_client.delete_collection(collection_name)
     except Exception as e:
         # Might fail if collection doesn't exist, we can ignore
         print(f"Error deleting collection: {e}")
