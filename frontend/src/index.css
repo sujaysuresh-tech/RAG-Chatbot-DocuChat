@@ -588,7 +588,6 @@ html, body {
   color: var(--bg-color);
   margin-left: auto;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 16px rgba(255, 140, 50, 0.22);
   font-weight: 500;
 }
 
@@ -794,7 +793,7 @@ html, body {
   flex: 1;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-light);
-  border: 1px solid rgba(255, 140, 50, 0.25);
+  border: 1px solid var(--border-orange);
   border-radius: 24px;
   padding: 0.9rem 3.5rem 0.9rem 1.2rem;
   font-family: var(--font-sans);
@@ -806,7 +805,6 @@ html, body {
 
 .chat-input:focus {
   border-color: var(--orange);
-  box-shadow: 0 0 0 3px rgba(255, 140, 50, 0.12);
 }
 
 .chat-submit-btn {
