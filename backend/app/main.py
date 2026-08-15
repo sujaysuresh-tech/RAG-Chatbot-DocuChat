@@ -54,10 +54,11 @@ PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a helpful AI assistant.
-Use ONLY the provided context to answer the question.
-If the answer is not present in the context,
-say: "I could not find the answer in the document."
+            """You are a helpful AI assistant that answers questions using ONLY the provided context (excerpts from the user's uploaded document).
+
+- If the user asks a specific factual question and the answer is not present in the context, say: "I could not find the answer in the document."
+- If the user gives an open-ended or general request (e.g. "explain", "explain this", "summarize", "what is this about", "give me an overview"), do NOT treat it as a missing-answer case. Instead, use the provided context to explain or summarize what it covers, in your own words, as clearly and helpfully as possible.
+- Never invent facts that aren't in the context, but do your best to be helpful with whatever context is provided.
 """,
         ),
         (
@@ -260,6 +261,30 @@ async def upload_url(req: UrlUploadRequest):
         raise HTTPException(status_code=500, detail=f"Failed to index document: {e}")
 
 
+# Generic/open-ended requests where the user isn't asking about a specific
+# fact, but wants an explanation or summary of the document as a whole.
+GENERIC_QUERY_PATTERNS = [
+    "explain", "summarize", "summarise", "summary", "overview",
+    "what is this", "what's this", "whats this", "about this document",
+    "about this file", "about this pdf", "tell me about this",
+    "describe this", "elaborate", "what does this document say",
+    "give me a summary", "give me an overview",
+]
+
+
+def is_generic_query(query: str) -> bool:
+    """True for vague, open-ended requests ('explain', 'summarize', etc.)
+    that aren't asking about a specific fact in the document."""
+    normalized = query.strip().lower().rstrip("?!. ")
+    if not normalized:
+        return False
+    if len(normalized.split()) <= 4:
+        for pattern in GENERIC_QUERY_PATTERNS:
+            if pattern in normalized:
+                return True
+    return normalized in {"explain", "summarize", "summarise", "summary", "overview"}
+
+
 @app.post("/api/query")
 async def query_index(req: QueryRequest):
     session_id = req.session_id
@@ -276,14 +301,29 @@ async def query_index(req: QueryRequest):
             embedding_function=embeddings,
         )
 
-        # Retrieve documents using MMR
-        retriever = vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
-        )
+        generic = is_generic_query(query)
+
+        if generic:
+            # Vague requests like "explain" or "summarize" carry little
+            # semantic signal on their own, so similarity search against the
+            # literal query text tends to pull back a handful of unrelated
+            # chunks. Instead, pull a broader, more representative sample of
+            # the document using a retrieval query aimed at general content.
+            retrieval_query = "main topics, key points, and overall summary of the document"
+            retriever = vectorstore.as_retriever(
+                search_type="mmr",
+                search_kwargs={"k": 10, "fetch_k": 30, "lambda_mult": 0.3},
+            )
+        else:
+            retrieval_query = query
+            # Retrieve documents using MMR
+            retriever = vectorstore.as_retriever(
+                search_type="mmr",
+                search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
+            )
 
         start_time = time.time()
-        docs = retriever.invoke(query)
+        docs = retriever.invoke(retrieval_query)
         context = "\n\n".join(doc.page_content for doc in docs)
 
         final_prompt = PROMPT.invoke({"context": context, "question": query})
@@ -296,6 +336,7 @@ async def query_index(req: QueryRequest):
 
         llm = ChatGoogleGenerativeAI(model=LLM_MODEL_NAME, google_api_key=google_api_key)
         response = llm.invoke(final_prompt)
+
 
         # Normalize response content to a plain string.
         # Gemini (langchain-google-genai) can return `content` as a list of
