@@ -296,7 +296,26 @@ async def query_index(req: QueryRequest):
 
         llm = ChatGoogleGenerativeAI(model=LLM_MODEL_NAME, google_api_key=google_api_key)
         response = llm.invoke(final_prompt)
-        
+
+        # Normalize response content to a plain string.
+        # Gemini (langchain-google-genai) can return `content` as a list of
+        # content blocks (e.g. [{"type": "text", "text": "...", "extras": {...}}])
+        # instead of a plain string, unlike Mistral. Extract and join just the text.
+        raw_content = response.content
+        if isinstance(raw_content, str):
+            answer_text = raw_content
+        elif isinstance(raw_content, list):
+            parts = []
+            for block in raw_content:
+                if isinstance(block, str):
+                    parts.append(block)
+                elif isinstance(block, dict):
+                    if block.get("type") == "text" and "text" in block:
+                        parts.append(block["text"])
+            answer_text = "".join(parts)
+        else:
+            answer_text = str(raw_content)
+
         elapsed = round(time.time() - start_time, 2)
         relevance = estimate_relevance(vectorstore, query)
 
@@ -306,7 +325,7 @@ async def query_index(req: QueryRequest):
         ]
 
         return {
-            "content": response.content,
+            "content": answer_text,
             "elapsed": elapsed,
             "relevance": relevance,
             "sources": sources
