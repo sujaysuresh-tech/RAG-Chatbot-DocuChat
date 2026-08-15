@@ -353,11 +353,25 @@ function App() {
                       style={{ display: 'none' }}
                       disabled={loading}
                     />
-                    <div className="dropzone-icon">📄</div>
-                    <span>Drag and drop your PDFs here, or click to browse</span>
-                    <small>Only PDF files are supported</small>
+                    {loading ? (
+                      <>
+                        <div className="spinner"></div>
+                        <div className="chip-label" style={{ fontSize: '0.6rem', marginTop: '0.6rem' }}>Indexing status:</div>
+                        <span style={{ color: 'var(--orange)' }}>
+                          {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
+                           stepStates.step3 === 'running' ? 'Generating embeddings...' :
+                           stepStates.step2 === 'running' ? 'Splitting texts...' : 'Parsing documents...'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="dropzone-icon">📄</div>
+                        <span>Drag and drop your PDFs here, or click to browse</span>
+                        <small>Only PDF files are supported</small>
+                      </>
+                    )}
                   </div>
-                  {files.length > 0 && (
+                  {files.length > 0 && !loading && (
                     <div className="file-list-preview">
                       {files.map((file, idx) => (
                         <div key={idx} className="file-item">
@@ -376,19 +390,6 @@ function App() {
               </form>
             </div>
           </div>
-
-          {loading && (
-            <div className="pipeline-section">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                <div className="chip-label" style={{ fontSize: '0.6rem' }}>Indexing status:</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--orange)' }}>
-                  {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
-                   stepStates.step3 === 'running' ? 'Generating embeddings...' :
-                   stepStates.step2 === 'running' ? 'Splitting texts...' : 'Parsing documents...'}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         // ---------------- SPLIT CHAT/SIDEBAR VIEW ----------------
