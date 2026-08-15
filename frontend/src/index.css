@@ -944,6 +944,9 @@ html, body {
 
   .input-card {
     padding: 1.2rem;
+    max-width: 85%;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .dropzone {
