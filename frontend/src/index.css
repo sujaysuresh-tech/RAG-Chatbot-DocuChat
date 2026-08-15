@@ -49,6 +49,10 @@ html, body {
     radial-gradient(ellipse 60% 40% at 80% 110%, rgba(29,78,216,0.08) 0%, transparent 55%);
 }
 
+.app-container.no-glow {
+  background-image: none;
+}
+
 
 .layout-main {
   flex: 1;
