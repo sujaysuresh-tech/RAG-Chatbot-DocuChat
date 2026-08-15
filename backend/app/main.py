@@ -33,7 +33,7 @@ app.add_middleware(
 
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL_NAME = "gemini-2.5-flash-lite"
+LLM_MODEL_NAME = "gemini-3.5-flash-lite"
 
 print("Initializing Embedding Model...")
 embeddings = HuggingFaceEndpointEmbeddings(
