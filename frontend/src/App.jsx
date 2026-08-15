@@ -308,7 +308,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${!session ? 'no-glow' : ''}`}>
       {/* Header */}
       {session && (
         <header className="app-header">
