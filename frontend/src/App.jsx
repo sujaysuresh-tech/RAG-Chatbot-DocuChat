@@ -378,7 +378,6 @@ function App() {
           </div>
 
           <div className="pipeline-section">
-            <div className="section-heading">Pipeline</div>
             <div className="pipeline-grid">
               {getStepCardHtml('01', 'Load Documents', stepStates.step1, stepDetails.step1)}
               {getStepCardHtml('02', 'Split into Chunks', stepStates.step2, stepDetails.step2)}
