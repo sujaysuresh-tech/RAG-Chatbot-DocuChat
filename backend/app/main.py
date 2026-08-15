@@ -4,7 +4,7 @@ import uuid
 import tempfile
 import requests
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -35,7 +35,7 @@ app.add_middleware(
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "models/gemini-embedding-001"
 EMBEDDING_DIM = 768  # truncated via output_dimensionality — good quality/storage tradeoff
-LLM_MODEL_NAME = "gemini-2.5-flash"
+LLM_MODEL_NAME = "gemini-3.6-flash"
 
 # Two separate Gemini API keys, as requested — one for embeddings, one for the LLM.
 GEMINI_EMBEDDING_API_KEY = os.getenv("GEMINI_EMBEDDING_API_KEY")
