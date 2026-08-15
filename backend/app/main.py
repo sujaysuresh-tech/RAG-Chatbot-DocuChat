@@ -9,9 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from pinecone import Pinecone, ServerlessSpec
+import chromadb
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_pinecone import PineconeVectorStore
+from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_mistralai import ChatMistralAI
@@ -33,11 +33,7 @@ app.add_middleware(
 
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384  # must match the embedding model's output size
 LLM_MODEL_NAME = "mistral-small-2506"
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "docuchat")
-PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")
-PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1")  # free tier only supports us-east-1 on aws
 
 print("Initializing Embedding Model...")
 embeddings = HuggingFaceEndpointEmbeddings(
@@ -47,29 +43,9 @@ embeddings = HuggingFaceEndpointEmbeddings(
 )
 print("Embedding Model initialized.")
 
-# Pinecone client + index (single free-tier index, sessions isolated via namespace)
-print("Connecting to Pinecone...")
-pinecone_api_key = os.getenv("PINECONE_API_KEY")
-if not pinecone_api_key:
-    raise RuntimeError("PINECONE_API_KEY is not configured.")
 
-pc = Pinecone(api_key=pinecone_api_key)
-
-existing_indexes = [idx["name"] for idx in pc.list_indexes()]
-if PINECONE_INDEX_NAME not in existing_indexes:
-    print(f"Creating Pinecone index '{PINECONE_INDEX_NAME}'...")
-    pc.create_index(
-        name=PINECONE_INDEX_NAME,
-        dimension=EMBEDDING_DIM,
-        metric="cosine",
-        spec=ServerlessSpec(cloud=PINECONE_CLOUD, region=PINECONE_REGION),
-    )
-    # Wait until the index is ready before using it
-    while not pc.describe_index(PINECONE_INDEX_NAME).status["ready"]:
-        time.sleep(1)
-
-pinecone_index = pc.Index(PINECONE_INDEX_NAME)
-print("Pinecone index ready.")
+# Global in-memory Ephemeral Chroma client
+chroma_client = chromadb.EphemeralClient()
 
 # In-memory session metadata registry: session_id -> metadata
 session_metadata = {}
@@ -107,16 +83,7 @@ class UrlUploadRequest(BaseModel):
     session_id: Optional[str] = None
 
 
-def get_vectorstore(session_id: str) -> PineconeVectorStore:
-    """Each session gets its own Pinecone namespace inside the single free-tier index."""
-    return PineconeVectorStore(
-        index=pinecone_index,
-        embedding=embeddings,
-        namespace=session_id,
-    )
-
-
-def estimate_relevance(vectorstore: PineconeVectorStore, query: str):
+def estimate_relevance(vectorstore, query: str):
     """Real relevance readout from similarity scores — purely additive,
     does not change what context is fed to the LLM."""
     try:
@@ -164,7 +131,7 @@ async def upload_files(
     for file in files:
         if not file.filename.lower().endswith(".pdf"):
             continue
-
+        
         # Save upload to a temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             try:
@@ -194,11 +161,16 @@ async def upload_files(
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = splitter.split_documents(all_docs)
 
-    # Index chunks in Pinecone (namespaced by session_id)
+    # Index chunks in Chroma
     try:
-        vectorstore = get_vectorstore(session_id)
+        collection_name = f"docuchat_{session_id}"
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
         vectorstore.add_documents(chunks)
-
+        
         # Update session metadata
         meta = session_metadata[session_id]
         meta["doc_names"] = list(set(meta["doc_names"] + new_doc_names))
@@ -265,7 +237,12 @@ async def upload_url(req: UrlUploadRequest):
     chunks = splitter.split_documents(all_docs)
 
     try:
-        vectorstore = get_vectorstore(session_id)
+        collection_name = f"docuchat_{session_id}"
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
         vectorstore.add_documents(chunks)
 
         meta = session_metadata[session_id]
@@ -292,7 +269,12 @@ async def query_index(req: QueryRequest):
         raise HTTPException(status_code=404, detail="Session not found or expired. Please upload documents again.")
 
     try:
-        vectorstore = get_vectorstore(session_id)
+        collection_name = f"docuchat_{session_id}"
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name=collection_name,
+            embedding_function=embeddings,
+        )
 
         # Retrieve documents using MMR
         retriever = vectorstore.as_retriever(
@@ -307,13 +289,14 @@ async def query_index(req: QueryRequest):
         final_prompt = PROMPT.invoke({"context": context, "question": query})
 
         # Initialize LLM
+        # Set api_key explicitly or rely on env
         mistral_api_key = os.getenv("MISTRAL_API_KEY")
         if not mistral_api_key:
             raise HTTPException(status_code=500, detail="MISTRAL_API_KEY is not configured on the backend server.")
 
         llm = ChatMistralAI(model=LLM_MODEL_NAME, api_key=mistral_api_key)
         response = llm.invoke(final_prompt)
-
+        
         elapsed = round(time.time() - start_time, 2)
         relevance = estimate_relevance(vectorstore, query)
 
@@ -328,8 +311,6 @@ async def query_index(req: QueryRequest):
             "relevance": relevance,
             "sources": sources
         }
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during query: {e}")
 
@@ -338,12 +319,13 @@ async def query_index(req: QueryRequest):
 async def delete_index(req: DeleteRequest):
     session_id = req.session_id
 
-    # Remove this session's vectors (its Pinecone namespace) if any exist
+    # Remove collection if exists in Chroma
+    collection_name = f"docuchat_{session_id}"
     try:
-        pinecone_index.delete(delete_all=True, namespace=session_id)
+        chroma_client.delete_collection(collection_name)
     except Exception as e:
-        # Might fail if namespace doesn't exist / is already empty — safe to ignore
-        print(f"Error deleting namespace: {e}")
+        # Might fail if collection doesn't exist, we can ignore
+        print(f"Error deleting collection: {e}")
 
     # Remove from session metadata
     if session_id in session_metadata:
