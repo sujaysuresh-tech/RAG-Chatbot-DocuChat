@@ -384,7 +384,7 @@ function App() {
                     className="btn-primary" 
                     disabled={files.length === 0 || loading}
                   >
-                    {loading ? <div className="spinner"></div> : 'Build Knowledge Base'}
+                    {loading ? <div className="spinner"></div> : 'Build'}
                   </button>
               </form>
             </div>
@@ -410,8 +410,6 @@ function App() {
             <div className="sidebar-divider"></div>
 
             <div>
-              <div className="sidebar-section-title">Add More Documents</div>
-
               <form onSubmit={handleBuildFromFiles}>
                   <div 
                     className={`dropzone ${loading ? 'dropzone-loading' : ''}`} 
@@ -458,7 +456,7 @@ function App() {
                     disabled={files.length === 0 || loading}
                     style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginTop: '0.5rem' }}
                   >
-                    {loading ? <div className="spinner" style={{ width: '15px', height: '15px' }}></div> : 'Add Documents'}
+                    {loading ? <div className="spinner" style={{ width: '15px', height: '15px' }}></div> : 'Build'}
                   </button>
               </form>
             </div>
