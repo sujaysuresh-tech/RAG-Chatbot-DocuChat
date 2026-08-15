@@ -977,13 +977,29 @@ html, body {
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
+    padding: 0.85rem 1rem;
+  }
+
+  .dropzone-icon {
+    font-size: 1.4rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .dropzone span {
+    font-size: 0.82rem;
+  }
+
+  .dropzone small {
+    font-size: 0.7rem;
   }
 
   .btn-primary {
-    max-width: 100%;
-    width: 100%;
+    max-width: 60%;
+    width: 60%;
     margin-left: auto;
     margin-right: auto;
+    padding: 0.55rem 1.5rem;
+    font-size: 0.85rem;
   }
 
   .file-list-preview {
