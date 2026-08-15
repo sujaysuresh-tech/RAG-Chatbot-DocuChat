@@ -9,8 +9,8 @@ mistralai
 langchain-mistralai
 huggingface-hub
 langchain-huggingface
-pinecone
-langchain-pinecone
+chromadb
+langchain-chroma
 pypdf
 requests
 python-dotenv
