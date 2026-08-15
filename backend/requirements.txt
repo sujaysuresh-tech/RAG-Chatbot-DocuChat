@@ -1,16 +1,18 @@
 fastapi
-uvicorn
+uvicorn[standard]
+python-dotenv
 python-multipart
-langchain
+requests
+pydantic
+
+# Pinecone (replaces chromadb)
+pinecone[grpc]
+langchain-pinecone
+
+# Existing stack
 langchain-community
 langchain-core
 langchain-text-splitters
-mistralai
-langchain-mistralai
-huggingface-hub
 langchain-huggingface
-chromadb
-langchain-chroma
+langchain-mistralai
 pypdf
-requests
-python-dotenv
