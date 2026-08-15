@@ -5,8 +5,7 @@ langchain
 langchain-community
 langchain-core
 langchain-text-splitters
-mistralai
-langchain-mistralai
+langchain-google-genai
 huggingface-hub
 langchain-huggingface
 chromadb
