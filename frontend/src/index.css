@@ -935,22 +935,22 @@ html, body {
   }
 
   .landing-container {
-    padding: 0.5rem 0 1rem;
-    justify-content: flex-start;
+    padding: 1rem 0;
+    justify-content: center;
   }
 
   .hero {
-    padding-top: 0;
-    margin-bottom: 0.5rem;
+    padding-top: 0.25rem;
+    margin-bottom: 1.5rem;
   }
 
   .hero-eyebrow {
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
   }
 
   .hero h1 {
     font-size: 2.2rem;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
   }
 
   .input-card {
@@ -960,6 +960,16 @@ html, body {
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
+  }
+
+  .dropzone,
+  .file-list-preview,
+  .btn-primary {
+    margin-top: 1rem;
+  }
+
+  .dropzone {
+    margin-top: 0;
   }
 
   .dropzone {
