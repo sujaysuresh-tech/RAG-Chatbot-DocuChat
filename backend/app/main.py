@@ -15,8 +15,7 @@ from qdrant_client.models import Distance, VectorParams
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_mistralai import ChatMistralAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Load environment variables
@@ -34,17 +33,33 @@ app.add_middleware(
 )
 
 # Models and Client Initialization
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output size
-LLM_MODEL_NAME = "mistral-small-2506"
+EMBEDDING_MODEL_NAME = "models/gemini-embedding-001"
+EMBEDDING_DIM = 768  # truncated via output_dimensionality — good quality/storage tradeoff
+LLM_MODEL_NAME = "gemini-2.5-flash"
+
+# Two separate Gemini API keys, as requested — one for embeddings, one for the LLM.
+GEMINI_EMBEDDING_API_KEY = os.getenv("GEMINI_EMBEDDING_API_KEY")
+GEMINI_LLM_API_KEY = os.getenv("GEMINI_LLM_API_KEY")
+
+if not GEMINI_EMBEDDING_API_KEY:
+    raise RuntimeError("GEMINI_EMBEDDING_API_KEY is not configured on the backend server.")
+if not GEMINI_LLM_API_KEY:
+    raise RuntimeError("GEMINI_LLM_API_KEY is not configured on the backend server.")
 
 print("Initializing Embedding Model...")
-embeddings = HuggingFaceEndpointEmbeddings(
+embeddings = GoogleGenerativeAIEmbeddings(
     model=EMBEDDING_MODEL_NAME,
-    task="feature-extraction",
-    huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    google_api_key=GEMINI_EMBEDDING_API_KEY,
+    output_dimensionality=EMBEDDING_DIM,
 )
 print("Embedding Model initialized.")
+
+print("Initializing LLM...")
+llm = ChatGoogleGenerativeAI(
+    model=LLM_MODEL_NAME,
+    google_api_key=GEMINI_LLM_API_KEY,
+)
+print("LLM initialized.")
 
 
 # Global Qdrant client — connects to your Qdrant Cloud cluster.
@@ -314,13 +329,6 @@ async def query_index(req: QueryRequest):
 
         final_prompt = PROMPT.invoke({"context": context, "question": query})
 
-        # Initialize LLM
-        # Set api_key explicitly or rely on env
-        mistral_api_key = os.getenv("MISTRAL_API_KEY")
-        if not mistral_api_key:
-            raise HTTPException(status_code=500, detail="MISTRAL_API_KEY is not configured on the backend server.")
-
-        llm = ChatMistralAI(model=LLM_MODEL_NAME, api_key=mistral_api_key)
         response = llm.invoke(final_prompt)
         
         elapsed = round(time.time() - start_time, 2)
