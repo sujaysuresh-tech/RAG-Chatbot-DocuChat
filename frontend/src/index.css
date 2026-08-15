@@ -947,25 +947,7 @@ html, body {
   }
 
   .dropzone {
-    padding: 0.85rem 1rem;
-    gap: 0.3rem;
-    border-radius: 10px;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
+    max-width: 85%;
     margin: 0 auto;
-  }
-
-  .dropzone-icon {
-    font-size: 1.4rem;
-    margin-bottom: 0.1rem;
-  }
-
-  .dropzone span {
-    font-size: 0.8rem;
-  }
-
-  .dropzone small {
-    font-size: 0.7rem;
   }
 }
