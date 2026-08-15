@@ -57,6 +57,8 @@ html, body {
 .layout-main {
   flex: 1;
   display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   max-width: 1400px;
   width: 100%;
