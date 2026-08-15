@@ -187,6 +187,12 @@ html, body {
   gap: 0.5rem;
 }
 
+.dropzone.dropzone-loading {
+  border-color: transparent;
+  cursor: default;
+  background: transparent;
+}
+
 .dropzone:hover {
   border-color: var(--orange);
   background: rgba(255, 140, 50, 0.03);
