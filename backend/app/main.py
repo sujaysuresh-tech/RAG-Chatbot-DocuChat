@@ -3,6 +3,7 @@ import time
 import uuid
 import tempfile
 import requests
+import asyncio
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,50 @@ chroma_client = chromadb.EphemeralClient()
 
 # In-memory session metadata registry: session_id -> metadata
 session_metadata = {}
+
+# --- Memory management ---
+# EphemeralClient keeps every uploaded document's chunks and embeddings
+# resident in RAM for as long as the process runs, with no automatic expiry.
+# Abandoned sessions (user closes the tab without deleting) otherwise
+# accumulate forever and eventually exceed the instance's memory limit.
+# These settings auto-evict inactive sessions so memory doesn't grow
+# unbounded on a free-tier instance shared across multiple users.
+SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", 20 * 60))  # 20 min of inactivity
+CLEANUP_INTERVAL_SECONDS = int(os.getenv("CLEANUP_INTERVAL_SECONDS", 10 * 60))  # sweep every 10 min
+
+
+def _touch_session(session_id: str):
+    """Record activity so the cleanup sweep doesn't evict a session still in use."""
+    if session_id in session_metadata:
+        session_metadata[session_id]["last_active"] = time.time()
+
+
+def _evict_session(session_id: str):
+    collection_name = f"docuchat_{session_id}"
+    try:
+        chroma_client.delete_collection(collection_name)
+    except Exception as e:
+        print(f"Cleanup: error deleting collection {collection_name}: {e}")
+    session_metadata.pop(session_id, None)
+
+
+async def _cleanup_loop():
+    while True:
+        await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
+        now = time.time()
+        expired = [
+            sid for sid, meta in list(session_metadata.items())
+            if now - meta.get("last_active", now) > SESSION_TTL_SECONDS
+        ]
+        for sid in expired:
+            print(f"Cleanup: evicting inactive session {sid}")
+            _evict_session(sid)
+
+
+@app.on_event("startup")
+async def _start_cleanup_task():
+    asyncio.create_task(_cleanup_loop())
+
 
 PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -125,7 +170,8 @@ async def upload_files(
         session_metadata[session_id] = {
             "doc_names": [],
             "num_pages": 0,
-            "num_chunks": 0
+            "num_chunks": 0,
+            "last_active": time.time()
         }
 
     all_docs = []
@@ -205,7 +251,8 @@ async def upload_url(req: UrlUploadRequest):
         session_metadata[session_id] = {
             "doc_names": [],
             "num_pages": 0,
-            "num_chunks": 0
+            "num_chunks": 0,
+            "last_active": time.time()
         }
 
     # Fetch document from URL
@@ -300,6 +347,8 @@ async def query_index(req: QueryRequest):
     if session_id not in session_metadata:
         raise HTTPException(status_code=404, detail="Session not found or expired. Please upload documents again.")
 
+    _touch_session(session_id)
+
     try:
         collection_name = f"docuchat_{session_id}"
         vectorstore = Chroma(
@@ -392,19 +441,7 @@ async def query_index(req: QueryRequest):
 @app.post("/api/delete")
 async def delete_index(req: DeleteRequest):
     session_id = req.session_id
-
-    # Remove collection if exists in Chroma
-    collection_name = f"docuchat_{session_id}"
-    try:
-        chroma_client.delete_collection(collection_name)
-    except Exception as e:
-        # Might fail if collection doesn't exist, we can ignore
-        print(f"Error deleting collection: {e}")
-
-    # Remove from session metadata
-    if session_id in session_metadata:
-        del session_metadata[session_id]
-
+    _evict_session(session_id)
     return {"status": "deleted"}
 
 
