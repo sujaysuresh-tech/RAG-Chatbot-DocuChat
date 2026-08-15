@@ -310,18 +310,16 @@ function App() {
   return (
     <div className="app-container">
       {/* Header */}
-      <header className="app-header">
-        {session && (
+      {session && (
+        <header className="app-header">
           <a href="/" className="logo">
             Docu<span>Chat</span>
           </a>
-        )}
-        {session && (
           <button onClick={handleDeleteIndex} className="btn-secondary" style={{ width: 'auto' }}>
             Delete Index
           </button>
-        )}
-      </header>
+        </header>
+      )}
 
       {/* Main Layout */}
       {!session ? (
