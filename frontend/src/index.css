@@ -252,7 +252,7 @@ html, body {
 .btn-primary {
   background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
   color: var(--bg-color);
-  font-family: var(--font-sans);
+  font-family: var(--font-title);
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: 0.04em;
