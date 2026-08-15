@@ -14,7 +14,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_mistralai import ChatMistralAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Load environment variables
@@ -33,7 +33,7 @@ app.add_middleware(
 
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL_NAME = "mistral-small-2506"
+LLM_MODEL_NAME = "gemini-2.5-flash-lite"
 
 print("Initializing Embedding Model...")
 embeddings = HuggingFaceEndpointEmbeddings(
@@ -290,11 +290,11 @@ async def query_index(req: QueryRequest):
 
         # Initialize LLM
         # Set api_key explicitly or rely on env
-        mistral_api_key = os.getenv("MISTRAL_API_KEY")
-        if not mistral_api_key:
-            raise HTTPException(status_code=500, detail="MISTRAL_API_KEY is not configured on the backend server.")
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        if not google_api_key:
+            raise HTTPException(status_code=500, detail="GOOGLE_API_KEY is not configured on the backend server.")
 
-        llm = ChatMistralAI(model=LLM_MODEL_NAME, api_key=mistral_api_key)
+        llm = ChatGoogleGenerativeAI(model=LLM_MODEL_NAME, google_api_key=google_api_key)
         response = llm.invoke(final_prompt)
         
         elapsed = round(time.time() - start_time, 2)
