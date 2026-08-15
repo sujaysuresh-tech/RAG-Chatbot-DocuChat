@@ -339,7 +339,7 @@ function App() {
             <div className="tab-content">
               <form onSubmit={handleBuildFromFiles}>
                   <div 
-                    className="dropzone" 
+                    className={`dropzone ${loading ? 'dropzone-loading' : ''}`} 
                     onClick={() => !loading && fileInputRef.current?.click()}
                     onDragOver={dragOver}
                     onDrop={fileDrop}
@@ -355,8 +355,7 @@ function App() {
                     />
                     {loading ? (
                       <>
-                        <div className="spinner"></div>
-                        <div className="chip-label" style={{ fontSize: '0.6rem', marginTop: '0.6rem' }}>Indexing status:</div>
+                        <div className="chip-label" style={{ fontSize: '0.6rem' }}>Indexing status:</div>
                         <span style={{ color: 'var(--orange)' }}>
                           {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
                            stepStates.step3 === 'running' ? 'Generating embeddings...' :
