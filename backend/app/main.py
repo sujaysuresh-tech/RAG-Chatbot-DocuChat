@@ -32,6 +32,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Tracks the last time any real (non-self-ping) request hit the app, so the
+# keep-alive loop can skip pinging when genuine traffic has already reset
+# Render's spin-down timer on its own.
+_last_request_time = time.time()
+
+
+@app.middleware("http")
+async def _track_last_request(request, call_next):
+    global _last_request_time
+    if request.url.path != "/api/health":
+        _last_request_time = time.time()
+    return await call_next(request)
+
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "gemini-3.5-flash-lite"
@@ -77,6 +90,44 @@ def _evict_session(session_id: str):
     session_metadata.pop(session_id, None)
 
 
+# --- Conversation memory ---
+# Stored server-side per session_id (the same key that already isolates each
+# user's uploaded documents), so multiple users never see each other's
+# history. Capped to the last MAX_HISTORY_TURNS exchanges, with each answer
+# truncated, so it stays a small, bounded amount of memory per session.
+MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", 5))
+HISTORY_ANSWER_CHAR_LIMIT = 500
+
+
+def _get_history(session_id: str):
+    meta = session_metadata.get(session_id)
+    return meta.get("history", []) if meta else []
+
+
+def _append_history(session_id: str, question: str, answer: str):
+    meta = session_metadata.get(session_id)
+    if meta is None:
+        return
+    history = meta.setdefault("history", [])
+    history.append({
+        "question": question,
+        "answer": answer[:HISTORY_ANSWER_CHAR_LIMIT]
+    })
+    # Keep only the most recent turns so this can't grow unbounded.
+    if len(history) > MAX_HISTORY_TURNS:
+        meta["history"] = history[-MAX_HISTORY_TURNS:]
+
+
+def _format_history(history):
+    if not history:
+        return ""
+    lines = ["Recent conversation:"]
+    for turn in history:
+        lines.append(f"User: {turn['question']}")
+        lines.append(f"Assistant: {turn['answer']}")
+    return "\n".join(lines) + "\n"
+
+
 async def _cleanup_loop():
     while True:
         await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
@@ -90,9 +141,41 @@ async def _cleanup_loop():
             _evict_session(sid)
 
 
+# --- Keep-alive (self-ping) ---
+# Render's free tier spins the service down after ~15 min with no inbound
+# HTTP traffic. This periodically pings the service's own public health
+# endpoint to keep it continuously awake. RENDER_EXTERNAL_URL is set
+# automatically by Render; set KEEP_ALIVE=0 to disable (e.g. for local dev).
+KEEP_ALIVE = os.getenv("KEEP_ALIVE", "1") == "1"
+KEEP_ALIVE_INTERVAL_SECONDS = int(os.getenv("KEEP_ALIVE_INTERVAL_SECONDS", 10 * 60))  # every 10 min
+
+
+async def _keep_alive_loop():
+    external_url = os.getenv("RENDER_EXTERNAL_URL")
+    if not external_url:
+        print("Keep-alive: RENDER_EXTERNAL_URL not set, skipping self-ping loop.")
+        return
+    health_url = external_url.rstrip("/") + "/api/health"
+    while True:
+        await asyncio.sleep(KEEP_ALIVE_INTERVAL_SECONDS)
+        # Real user traffic already resets Render's spin-down timer on its
+        # own, so only self-ping if the site has genuinely been idle for
+        # the full interval — avoids pinging (and any blocking-call delay)
+        # while someone is actively using the app.
+        idle_seconds = time.time() - _last_request_time
+        if idle_seconds < KEEP_ALIVE_INTERVAL_SECONDS:
+            continue
+        try:
+            await asyncio.to_thread(requests.get, health_url, timeout=10)
+        except Exception as e:
+            print(f"Keep-alive: ping failed: {e}")
+
+
 @app.on_event("startup")
 async def _start_cleanup_task():
     asyncio.create_task(_cleanup_loop())
+    if KEEP_ALIVE:
+        asyncio.create_task(_keep_alive_loop())
 
 
 PROMPT = ChatPromptTemplate.from_messages(
@@ -105,6 +188,7 @@ PROMPT = ChatPromptTemplate.from_messages(
 - If multiple different files appear in the context, mention which file(s) your answer is based on (e.g. "According to report.pdf, ..."). If there is only one file, you don't need to repeat its name every time.
 - If the user asks a specific factual question and the answer is not present in the context, say: "I could not find the answer in the document."
 - If the user gives an open-ended or general request (e.g. "explain", "explain this", "summarize", "what is this about", "give me an overview"), do NOT treat it as a missing-answer case. Instead, use the provided context to explain or summarize what it covers, in your own words, as clearly and helpfully as possible. If multiple files are present, organize the summary by file where it makes sense.
+- You may be given recent conversation history below the context. Use it to understand follow-up questions (e.g. "what about that", "explain more", "and page 2?") and keep your answers consistent with what you said before. The conversation history is for context only — it is not itself a source of facts about the document; still ground factual claims in the provided context.
 - Never invent facts that aren't in the context, but do your best to be helpful with whatever context is provided.
 """,
         ),
@@ -112,6 +196,7 @@ PROMPT = ChatPromptTemplate.from_messages(
             "human",
             """Context:
 {context}
+{history}
 Question:
 {question}
 """,
@@ -358,6 +443,7 @@ async def query_index(req: QueryRequest):
         )
 
         generic = is_generic_query(query)
+        history = _get_history(session_id)
 
         if generic:
             # Vague requests like "explain" or "summarize" carry little
@@ -371,7 +457,14 @@ async def query_index(req: QueryRequest):
                 search_kwargs={"k": 10, "fetch_k": 30, "lambda_mult": 0.3},
             )
         else:
-            retrieval_query = query
+            # Fold the previous question into retrieval too, so short
+            # follow-ups ("what about that?", "and page 2?") that carry
+            # little meaning on their own still retrieve relevant chunks
+            # based on what was being discussed.
+            if history:
+                retrieval_query = f"{history[-1]['question']} {query}"
+            else:
+                retrieval_query = query
             # Retrieve documents using MMR
             retriever = vectorstore.as_retriever(
                 search_type="mmr",
@@ -385,7 +478,11 @@ async def query_index(req: QueryRequest):
             for d in docs
         )
 
-        final_prompt = PROMPT.invoke({"context": context, "question": query})
+        final_prompt = PROMPT.invoke({
+            "context": context,
+            "history": _format_history(history),
+            "question": query
+        })
 
         # Initialize LLM
         # Set api_key explicitly or rely on env
@@ -418,6 +515,8 @@ async def query_index(req: QueryRequest):
 
         elapsed = round(time.time() - start_time, 2)
         relevance = estimate_relevance(vectorstore, query)
+
+        _append_history(session_id, query, answer_text)
 
         sources = [
             {
