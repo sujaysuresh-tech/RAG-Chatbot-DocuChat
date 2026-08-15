@@ -252,7 +252,7 @@ html, body {
 .btn-primary {
   background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
   color: var(--bg-color);
-  font-family: var(--font-title);
+  font-family: var(--font-sans);
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: 0.04em;
@@ -260,8 +260,7 @@ html, body {
   border-radius: 10px;
   padding: 0.8rem 2rem;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-  box-shadow: 0 4px 20px rgba(255, 140, 50, 0.3);
+  transition: transform 0.15s, opacity 0.15s;
   width: 100%;
   margin-top: 1rem;
   display: flex;
@@ -272,7 +271,6 @@ html, body {
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(255, 140, 50, 0.4);
   opacity: 0.95;
 }
 
@@ -283,7 +281,6 @@ html, body {
 .btn-primary:disabled {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-dim);
-  box-shadow: none;
   cursor: not-allowed;
 }
 
