@@ -377,14 +377,18 @@ function App() {
             </div>
           </div>
 
-          <div className="pipeline-section">
-            <div className="pipeline-grid">
-              {getStepCardHtml('01', 'Load Documents', stepStates.step1, stepDetails.step1)}
-              {getStepCardHtml('02', 'Split into Chunks', stepStates.step2, stepDetails.step2)}
-              {getStepCardHtml('03', 'Generate Embeddings', stepStates.step3, stepDetails.step3)}
-              {getStepCardHtml('04', 'Build Vector Index', stepStates.step4, stepDetails.step4)}
+          {loading && (
+            <div className="pipeline-section">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                <div className="chip-label" style={{ fontSize: '0.6rem' }}>Indexing status:</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--orange)' }}>
+                  {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
+                   stepStates.step3 === 'running' ? 'Generating embeddings...' :
+                   stepStates.step2 === 'running' ? 'Splitting texts...' : 'Parsing documents...'}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         // ---------------- SPLIT CHAT/SIDEBAR VIEW ----------------
