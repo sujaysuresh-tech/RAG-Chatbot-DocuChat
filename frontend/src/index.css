@@ -945,4 +945,15 @@ html, body {
   .input-card {
     padding: 1.2rem;
   }
+
+  .dropzone {
+    max-width: 80%;
+    margin: 0 auto;
+  }
+
+  .btn-primary {
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
