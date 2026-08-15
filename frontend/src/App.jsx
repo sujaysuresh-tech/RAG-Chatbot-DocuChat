@@ -414,7 +414,7 @@ function App() {
 
               <form onSubmit={handleBuildFromFiles}>
                   <div 
-                    className="dropzone" 
+                    className={`dropzone ${loading ? 'dropzone-loading' : ''}`} 
                     onClick={() => !loading && fileInputRef.current?.click()}
                     style={{ padding: '1rem 0.5rem', gap: '0.2rem' }}
                   >
@@ -427,10 +427,23 @@ function App() {
                       style={{ display: 'none' }}
                       disabled={loading}
                     />
-                    <div style={{ fontSize: '1.2rem' }}>📄</div>
-                    <span style={{ fontSize: '0.8rem' }}>Upload more PDFs</span>
+                    {loading ? (
+                      <>
+                        <div className="chip-label" style={{ fontSize: '0.6rem' }}>Indexing status:</div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--orange)' }}>
+                          {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
+                           stepStates.step3 === 'running' ? 'Generating embeddings...' :
+                           stepStates.step2 === 'running' ? 'Splitting texts...' : 'Parsing documents...'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: '1.2rem' }}>📄</div>
+                        <span style={{ fontSize: '0.8rem' }}>Upload more PDFs</span>
+                      </>
+                    )}
                   </div>
-                  {files.length > 0 && (
+                  {files.length > 0 && !loading && (
                     <div className="file-list-preview" style={{ maxHeight: '60px' }}>
                       {files.map((file, idx) => (
                         <div key={idx} className="file-item">
@@ -448,17 +461,6 @@ function App() {
                     {loading ? <div className="spinner" style={{ width: '15px', height: '15px' }}></div> : 'Add Documents'}
                   </button>
               </form>
-
-              {loading && (
-                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div className="chip-label" style={{ fontSize: '0.6rem' }}>Indexing status:</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--orange)' }}>
-                    {stepStates.step4 === 'running' ? 'Rebuilding vector index...' :
-                     stepStates.step3 === 'running' ? 'Generating embeddings...' :
-                     stepStates.step2 === 'running' ? 'Splitting texts...' : 'Parsing documents...'}
-                  </div>
-                </div>
-              )}
             </div>
           </aside>
 
