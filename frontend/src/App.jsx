@@ -9,9 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function App() {
   const [session, setSession] = useState(null);
-  const [activeTab, setActiveTab] = useState('file'); // 'file' | 'url'
   const [files, setFiles] = useState([]);
-  const [urlInput, setUrlInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
@@ -200,31 +198,6 @@ function App() {
     runPipelineSimulation(uploadPromise);
   };
 
-  const handleBuildFromUrl = (e) => {
-    e.preventDefault();
-    if (!urlInput) return;
-
-    const existingSessionId = session?.session_id || '';
-    const payload = {
-      url: urlInput,
-      session_id: existingSessionId || null,
-    };
-
-    const uploadPromise = fetch(`${API_URL}/api/upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).then(async (res) => {
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to index URL');
-      }
-      return res.json();
-    });
-
-    runPipelineSimulation(uploadPromise);
-  };
-
   const handleQuery = (e) => {
     e.preventDefault();
     if (!queryInput.trim() || !session || chatLoading) return;
@@ -363,26 +336,8 @@ function App() {
           <div className="input-card">
             {error && <div className="alert alert-danger">{error}</div>}
 
-            <div className="tabs-header">
-              <button 
-                onClick={() => { setActiveTab('file'); setError(''); }} 
-                className={`tab-btn ${activeTab === 'file' ? 'active' : ''}`}
-                disabled={loading}
-              >
-                Upload File
-              </button>
-              <button 
-                onClick={() => { setActiveTab('url'); setError(''); }} 
-                className={`tab-btn ${activeTab === 'url' ? 'active' : ''}`}
-                disabled={loading}
-              >
-                Paste Link
-              </button>
-            </div>
-
             <div className="tab-content">
-              {activeTab === 'file' ? (
-                <form onSubmit={handleBuildFromFiles}>
+              <form onSubmit={handleBuildFromFiles}>
                   <div 
                     className="dropzone" 
                     onClick={() => !loading && fileInputRef.current?.click()}
@@ -418,30 +373,7 @@ function App() {
                   >
                     {loading ? <div className="spinner"></div> : 'Build Knowledge Base'}
                   </button>
-                </form>
-              ) : (
-                <form onSubmit={handleBuildFromUrl} className="input-text-container">
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Paste a direct public PDF URL to build knowledge base:
-                  </span>
-                  <input 
-                    type="url" 
-                    placeholder="https://example.com/document.pdf" 
-                    className="text-input"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
-                    disabled={!urlInput || loading}
-                  >
-                    {loading ? <div className="spinner"></div> : 'Fetch & Build from Link'}
-                  </button>
-                </form>
-              )}
+              </form>
             </div>
           </div>
 
@@ -476,27 +408,8 @@ function App() {
 
             <div>
               <div className="sidebar-section-title">Add More Documents</div>
-              <div className="tabs-header" style={{ marginBottom: '1rem' }}>
-                <button 
-                  onClick={() => { setActiveTab('file'); setError(''); }} 
-                  className={`tab-btn ${activeTab === 'file' ? 'active' : ''}`}
-                  disabled={loading}
-                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                >
-                  File
-                </button>
-                <button 
-                  onClick={() => { setActiveTab('url'); setError(''); }} 
-                  className={`tab-btn ${activeTab === 'url' ? 'active' : ''}`}
-                  disabled={loading}
-                  style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                >
-                  Link
-                </button>
-              </div>
 
-              {activeTab === 'file' ? (
-                <form onSubmit={handleBuildFromFiles}>
+              <form onSubmit={handleBuildFromFiles}>
                   <div 
                     className="dropzone" 
                     onClick={() => !loading && fileInputRef.current?.click()}
@@ -531,29 +444,7 @@ function App() {
                   >
                     {loading ? <div className="spinner" style={{ width: '15px', height: '15px' }}></div> : 'Add Documents'}
                   </button>
-                </form>
-              ) : (
-                <form onSubmit={handleBuildFromUrl} className="input-text-container">
-                  <input 
-                    type="url" 
-                    placeholder="https://example.com/document.pdf" 
-                    className="text-input"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    disabled={loading}
-                    style={{ padding: '0.5rem 0.8rem', fontSize: '0.85rem' }}
-                    required
-                  />
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
-                    disabled={!urlInput || loading}
-                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', marginTop: '0.5rem' }}
-                  >
-                    {loading ? <div className="spinner" style={{ width: '15px', height: '15px' }}></div> : 'Fetch & Add'}
-                  </button>
-                </form>
-              )}
+              </form>
 
               {loading && (
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
