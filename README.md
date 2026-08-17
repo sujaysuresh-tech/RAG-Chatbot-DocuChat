@@ -140,6 +140,6 @@ HUGGINGFACEHUB_API_TOKEN=your-huggingface-token
 
 <div align="center">
 
-Built by [Sujay Suresh](https://github.com/sujaysuresh-tech) · 🔗 [Live Demo](https://rag-chatbot-docuchat.vercel.app/) · 📦 [Repository](https://github.com/sujaysuresh-tech/RAG-Chatbot-DocuChat)
+Built by [Sujay Suresh](https://github.com/sujaysuresh-tech) · 🔗 [Live Demo](https://rag-chatbot-docuchat.vercel.app/) 
 
 </div>
