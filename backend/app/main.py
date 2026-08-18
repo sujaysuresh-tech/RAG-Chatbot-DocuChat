@@ -32,19 +32,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Tracks the last time any real (non-self-ping) request hit the app, so the
-# keep-alive loop can skip pinging when genuine traffic has already reset
-# Render's spin-down timer on its own.
-_last_request_time = time.time()
-
-
-@app.middleware("http")
-async def _track_last_request(request, call_next):
-    global _last_request_time
-    if request.url.path != "/api/health":
-        _last_request_time = time.time()
-    return await call_next(request)
-
 # Models and Client Initialization
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "gemini-3.5-flash-lite"
@@ -141,41 +128,14 @@ async def _cleanup_loop():
             _evict_session(sid)
 
 
-# --- Keep-alive (self-ping) ---
-# Render's free tier spins the service down after ~15 min with no inbound
-# HTTP traffic. This periodically pings the service's own public health
-# endpoint to keep it continuously awake. RENDER_EXTERNAL_URL is set
-# automatically by Render; set KEEP_ALIVE=0 to disable (e.g. for local dev).
-KEEP_ALIVE = os.getenv("KEEP_ALIVE", "1") == "1"
-KEEP_ALIVE_INTERVAL_SECONDS = int(os.getenv("KEEP_ALIVE_INTERVAL_SECONDS", 10 * 60))  # every 10 min
-
-
-async def _keep_alive_loop():
-    external_url = os.getenv("RENDER_EXTERNAL_URL")
-    if not external_url:
-        print("Keep-alive: RENDER_EXTERNAL_URL not set, skipping self-ping loop.")
-        return
-    health_url = external_url.rstrip("/") + "/api/health"
-    while True:
-        await asyncio.sleep(KEEP_ALIVE_INTERVAL_SECONDS)
-        # Real user traffic already resets Render's spin-down timer on its
-        # own, so only self-ping if the site has genuinely been idle for
-        # the full interval — avoids pinging (and any blocking-call delay)
-        # while someone is actively using the app.
-        idle_seconds = time.time() - _last_request_time
-        if idle_seconds < KEEP_ALIVE_INTERVAL_SECONDS:
-            continue
-        try:
-            await asyncio.to_thread(requests.get, health_url, timeout=10)
-        except Exception as e:
-            print(f"Keep-alive: ping failed: {e}")
+# Keep-alive is now handled externally by an uptime pinger (cron-job.org)
+# hitting /api/health on a schedule, instead of self-pinging from inside
+# the app.
 
 
 @app.on_event("startup")
 async def _start_cleanup_task():
     asyncio.create_task(_cleanup_loop())
-    if KEEP_ALIVE:
-        asyncio.create_task(_keep_alive_loop())
 
 
 PROMPT = ChatPromptTemplate.from_messages(
