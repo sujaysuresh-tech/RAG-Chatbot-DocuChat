@@ -1,0 +1,15 @@
+Copyright (c) 2026 Sujay Suresh. All Rights Reserved.
+
+This repository and its contents (including but not limited to source code,
+design, layout, text, images, and other assets) are the exclusive property
+of Sujay Suresh.
+
+No part of this project may be copied, reproduced, distributed, modified,
+publicly displayed, or used to create derivative works, in whole or in part,
+in any form or by any means, without the prior written permission of the
+copyright holder.
+
+Viewing the source of this repository (e.g. on GitHub) does not grant any
+license to use, copy, or redistribute it.
+
+For permission requests, please contact the copyright holder directly.
