@@ -6,8 +6,7 @@ langchain-community
 langchain-core
 langchain-text-splitters
 langchain-google-genai
-huggingface-hub
-langchain-huggingface
+fastembed
 chromadb
 langchain-chroma
 pypdf

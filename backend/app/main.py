@@ -14,8 +14,7 @@ import chromadb
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Load environment variables
@@ -33,15 +32,22 @@ app.add_middleware(
 )
 
 # Models and Client Initialization
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "gemini-3.5-flash-lite"
 
-print("Initializing Embedding Model...")
-embeddings = HuggingFaceEndpointEmbeddings(
-    model=EMBEDDING_MODEL_NAME,
-    task="feature-extraction",
-    huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
-)
+# EMBEDDING_PROVIDER=google (default): Gemini embeddings via GEMINI_EMBEDDING_API_KEY
+# (falls back to GOOGLE_API_KEY if not set), so embeddings can use a different Google account's key.
+# EMBEDDING_PROVIDER=local: free on-device ONNX embeddings (fastembed), no API or credits.
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "google").lower()
+
+print(f"Initializing Embedding Model ({EMBEDDING_PROVIDER})...")
+if EMBEDDING_PROVIDER == "local":
+    from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+    embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+else:
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model=os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001"),
+        google_api_key=os.getenv("GEMINI_EMBEDDING_API_KEY") or os.getenv("GOOGLE_API_KEY"),
+    )
 print("Embedding Model initialized.")
 
 

@@ -46,7 +46,7 @@ The project explores a production-style RAG pipeline end-to-end: a React fronten
 | ⚙️ Backend | FastAPI (Python) |
 | 🔗 Orchestration | LangChain |
 | 🧩 Vector Store | ChromaDB |
-| 🧬 Embeddings | HuggingFace Inference Endpoint (`all-MiniLM-L6-v2`) |
+| 🧬 Embeddings | Gemini Embeddings (or local `all-MiniLM-L6-v2` via fastembed) |
 | 🤖 AI Model | Google Gemini |
 | 📄 PDF Parsing | pypdf / PyPDFLoader |
 | ☁️ Deployment | Frontend on Vercel · Backend on Render |
@@ -110,8 +110,9 @@ DocuChat's backend needs API keys for embeddings and generation.
 Add these as environment variables (locally in a `.env` file inside `backend/`, or in your Render project settings for deployment):
 
 ```bash
-GOOGLE_API_KEY=your-gemini-api-key
-HUGGINGFACEHUB_API_TOKEN=your-huggingface-token
+GOOGLE_API_KEY=your-gemini-api-key            # used for answer generation
+GEMINI_EMBEDDING_API_KEY=other-account-key    # optional: embeddings key (defaults to GOOGLE_API_KEY)
+# optional: EMBEDDING_PROVIDER=local to embed on-device (free, no API)
 ```
 
 > ⚠️ Never commit your API keys to a public repository — that's why they live in environment variables, kept off the client and out of version control. 🙅‍♂️
